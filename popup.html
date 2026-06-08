@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <style>
+      :root {
+        --accent: linear-gradient(135deg, #7c3aed, #2563eb);
+      }
       body {
-        width: 280px;
+        width: 300px;
         margin: 0;
-        padding: 14px 16px;
-        font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif;
+        padding: 14px 16px 16px;
+        font: 13px/1.5 system-ui, sans-serif;
         color: #1d1d22;
         background: linear-gradient(135deg, #7c3aed10, #2563eb10);
       }
       h1 {
         font-size: 15px;
-        margin: 0 0 8px;
+        margin: 0 0 10px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -22,42 +25,117 @@
         width: 18px;
         height: 18px;
         border-radius: 5px;
-        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        background: var(--accent);
       }
-      ol {
-        margin: 8px 0 10px;
-        padding-left: 18px;
-      }
-      li {
-        margin: 3px 0;
-      }
-      .k {
-        background: #00000010;
-        border-radius: 4px;
-        padding: 0 5px;
-        font-family: ui-monospace, monospace;
-      }
-      .note {
-        color: #555;
+      .gestures {
         font-size: 12px;
-        margin-top: 10px;
-        border-top: 1px solid #00000015;
-        padding-top: 8px;
+        color: #333;
+        margin: 0 0 12px;
+        line-height: 1.6;
+      }
+      .gestures b {
+        color: #111;
+      }
+      .sec {
+        font-size: 12px;
+        font-weight: 700;
+        color: #555;
+        margin: 12px 0 6px;
+        border-top: 1px solid #00000014;
+        padding-top: 10px;
+      }
+      .row {
+        margin: 9px 0;
+      }
+      .row .lab {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+      }
+      .row .lab .val {
+        font-family: ui-monospace, monospace;
+        color: #2563eb;
+        font-weight: 700;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #7c3aed;
+      }
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 10px 0 2px;
+      }
+      .toggle input {
+        width: 18px;
+        height: 18px;
+        accent-color: #7c3aed;
+      }
+      .hint {
+        font-size: 11px;
+        color: #777;
+        margin-top: 2px;
+      }
+      button.reset {
+        margin-top: 12px;
+        width: 100%;
+        padding: 7px;
+        border: 0;
+        border-radius: 8px;
+        background: #00000010;
+        color: #333;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button.reset:hover {
+        background: #00000018;
       }
     </style>
   </head>
   <body>
     <h1><span class="dot"></span>GestureSeek</h1>
-    <div>在 YouTube / Bilibili 视频页:</div>
-    <ol>
-      <li>把手伸到摄像头前。</li>
-      <li><b>捏合</b>拇指与食指 = 抓住进度条。</li>
-      <li>捏住后<b>左右移动手</b> = 实时拖动进度。</li>
-      <li><b>松开</b>手指 = 放下,停在当前位置。</li>
-    </ol>
-    <div>手往<b>右</b> = 视频<b>前进</b>;满屏宽度 = 整条视频。</div>
-    <div class="note">
-      首次使用会请求摄像头权限,点"允许"即可(只问一次,两站通用)。所有画面在本地处理,绝不上传。
+
+    <div class="gestures">
+      <b>Pinch + middle/ring/pinky up</b> → scrub; move right = forward.<br />
+      <b>✊ Hold a fist</b> → toggle play / pause.
     </div>
+
+    <div class="sec">Sensitivity (applies live)</div>
+
+    <div class="row">
+      <div class="lab"><span>Start deadzone (move before scrubbing)</span><span class="val" id="vDead">0.05</span></div>
+      <input type="range" id="deadzone" min="0" max="0.15" step="0.01" />
+      <div class="hint">Higher = steadier (less jitter); lower = more sensitive.</div>
+    </div>
+
+    <div class="row">
+      <div class="lab"><span>Fist hold time (seconds)</span><span class="val" id="vHold">0.35</span></div>
+      <input type="range" id="hold" min="0.1" max="1.0" step="0.05" />
+      <div class="hint">How long to hold a fist before it toggles play/pause.</div>
+    </div>
+
+    <div class="row">
+      <div class="lab"><span>Fingers required to scrub</span><span class="val" id="vFingers">3</span></div>
+      <input type="range" id="fingers" min="1" max="3" step="1" />
+      <div class="hint">3 = fewest false triggers; 2 = easier to pose; 1 = loosest.</div>
+    </div>
+
+    <div class="row">
+      <div class="lab"><span>Pinch sensitivity (smaller = pinch tighter)</span><span class="val" id="vPinch">0.05</span></div>
+      <input type="range" id="pinch" min="0.03" max="0.1" step="0.005" />
+      <div class="hint">Thumb-to-index distance below this counts as a pinch.</div>
+    </div>
+
+    <div class="sec">Debug</div>
+    <div class="toggle">
+      <span>Show camera preview + hand skeleton</span>
+      <input type="checkbox" id="preview" />
+    </div>
+    <div class="hint">Shows a small corner window of the detected hand; turn it off once tuned.</div>
+
+    <button class="reset" id="reset">Reset to defaults</button>
+
+    <script src="popup.js"></script>
   </body>
 </html>

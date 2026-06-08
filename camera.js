@@ -66,6 +66,22 @@ const WRIST = 0;
 // [tip, pip] landmark pairs for middle / ring / pinky (used to tell extended vs curled)
 const SIDE_FINGERS = [[12, 10], [16, 14], [20, 18]];
 const DETECT_FAIL_LIMIT = 60; // ~2s of consecutive inference errors before warning
+// 21-point hand skeleton edges (for the optional debug preview)
+const HAND_CONNECTIONS = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17], [0, 17], [17, 18], [18, 19], [19, 20],
+];
+
+// Debug preview toggle, driven by content.js (popup setting).
+let previewOn = false;
+window.addEventListener("message", function (e) {
+  if (e.source !== window.parent) return;
+  const m = e.data;
+  if (m && m.type === "gs-preview") previewOn = !!m.on;
+});
 
 function post(msg) {
   try {
@@ -153,6 +169,7 @@ async function main() {
   }
 
   const video = document.getElementById("cam");
+  const previewCanvas = document.getElementById("preview");
   video.srcObject = stream;
   try {
     await video.play();
@@ -169,6 +186,44 @@ async function main() {
   }
 
   post({ type: "gs-ready" });
+
+  // Optional debug preview: mirrored webcam + hand skeleton, drawn only when the
+  // user enables it (the iframe is resized to be visible by content.js).
+  function drawPreview(lms) {
+    const c = previewCanvas;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const w = c.width;
+    const h = c.height;
+    ctx.save();
+    ctx.clearRect(0, 0, w, h);
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1); // selfie mirror, matches how the gesture x is mirrored
+    try {
+      ctx.drawImage(video, 0, 0, w, h);
+    } catch (e) {
+      /* video not ready */
+    }
+    if (lms) {
+      ctx.strokeStyle = "#00e676";
+      ctx.lineWidth = 2;
+      for (let k = 0; k < HAND_CONNECTIONS.length; k++) {
+        const a = lms[HAND_CONNECTIONS[k][0]];
+        const b = lms[HAND_CONNECTIONS[k][1]];
+        ctx.beginPath();
+        ctx.moveTo(a.x * w, a.y * h);
+        ctx.lineTo(b.x * w, b.y * h);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#ff5252";
+      for (let k = 0; k < lms.length; k++) {
+        ctx.beginPath();
+        ctx.arc(lms[k].x * w, lms[k].y * h, 3, 0, 6.2832);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
 
   let lastTs = -1;
   let failStreak = 0;
@@ -202,6 +257,7 @@ async function main() {
     }
 
     const parsed = readResult(res);
+    if (previewOn) drawPreview(parsed.landmarks);
     if (parsed.landmarks) {
       const lm = parsed.landmarks;
       const t = lm[THUMB_TIP];

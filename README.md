@@ -1,79 +1,89 @@
 # GestureSeek
 
-用 USB 摄像头的**手势**控制 YouTube / Bilibili:**捏合拖动进度条**,**握拳切换播放/暂停**。
+Control YouTube and Bilibili with **webcam hand gestures**: **pinch and drag to scrub** the progress bar, **make a fist to play/pause**.
 
-- **捏合拇指与食指、同时另外三根手指(中/无名/小指)竖起** = 抓住进度条 → 左右移动手 = 拖动 → 松开 = 放下。手往右 = 前进;手扫过整个画面宽度 = 整条视频。(要求三指竖起是为了避免日常手势误触发。)
-- ✊ **握拳并保持约半秒 = 切换 播放/暂停**(再握一次切回)。手掌张开 = 休息位,不触发。
+- **Pinch** thumb + index together **with your middle, ring and pinky raised** = grab the progress bar → move your hand left/right to scrub → release to drop it. Hand to the right = forward; sweeping the full camera width = the whole video. (The three raised fingers are required so everyday hand poses don't trigger it by accident.)
+- ✊ **Hold a fist for about half a second** = toggle play/pause (fist again to toggle back). An open palm is the resting pose and does nothing.
 
-全程在本地处理(MediaPipe 手部识别),**摄像头画面绝不上传**。
+Everything runs locally (MediaPipe hand detection on your GPU). **The webcam image never leaves your machine.**
 
-拖动时直接驱动 **YouTube / B站自带的进度条**(不额外加进度条);**播放、暂停、全屏**下均可用。
-
----
-
-## 安装(加载已解压的扩展)
-
-1. 打开 Chrome,地址栏输入 `chrome://extensions` 回车。
-2. 打开右上角的 **「开发者模式 / Developer mode」** 开关。
-3. 点 **「加载已解压的扩展程序 / Load unpacked」**。
-4. 选择文件夹:**`C:\Project\GestureSeek`**(就是包含 `manifest.json` 的这个目录)。
-5. 列表里出现 **GestureSeek** 即安装成功。
-
-> 仅支持 Chrome / Edge 等 Chromium 内核浏览器(用的是 Manifest V3 + offscreen 之外的扩展能力)。
-
-## 第一次使用
-
-1. 打开任意一个 **YouTube** 或 **Bilibili** 视频页。
-2. 浏览器会弹出**摄像头授权**提示(以 "GestureSeek" 名义),点 **「允许」**。
-   - 只需授权一次,之后两个网站都自动生效。
-   - 如果没弹或点了拒绝:点地址栏左侧的摄像头/锁图标,把摄像头改为"允许",然后刷新页面。
-3. 把手伸到摄像头前,**捏合并左右移动**即可拖动进度。
-
-## 使用手势
-
-| 动作 | 效果 |
-|------|------|
-| 捏合(拇指尖贴食指尖)**+ 中/无名/小指竖起** | 抓住进度条(三指竖起防误触) |
-| 捏住 + 手向右移 | 视频前进 |
-| 捏住 + 手向左移 | 视频后退 |
-| 松开手指 | 放下,停在当前位置 |
-| ✊ 握拳保持约半秒 | 切换 播放 / 暂停(再握一次切回) |
-| 手掌张开 / 手移出画面 | 休息位,不触发 |
-
-灵敏度:**摄像头画面整个宽度 = 整条视频**。所以短视频更灵敏、长视频一扫就能跳很远。
-
-起步死区:刚捏合时的小幅晃动**不会动进度条**,手移动超过一定幅度后才开始拖(避免一捏就抖)。
+While dragging, the site's **own native progress bar** moves (GestureSeek draws no bar of its own). Works while playing, paused, and in fullscreen.
 
 ---
 
-## 工作原理(技术)
+## Install (load unpacked)
+
+1. Open Chrome and go to `chrome://extensions`.
+2. Turn on **Developer mode** (top-right).
+3. Click **Load unpacked**.
+4. Select the folder **`C:\Project\GestureSeek`** (the one that contains `manifest.json`).
+5. **GestureSeek** appears in the list — installed.
+
+> Chromium-based browsers only (Chrome / Edge). Manifest V3.
+
+## First run
+
+1. Open any **YouTube** or **Bilibili** video page.
+2. The browser asks for **camera permission** (as "GestureSeek"). Click **Allow**.
+   - Asked only once; it then works on both sites automatically.
+   - If it didn't ask, or you denied it: click the camera icon on the left of the address bar, set it to Allow, then reload the page.
+3. Hold your hand up to the webcam and **pinch + raise three fingers, then move** to scrub.
+
+## Gestures
+
+| Action | Effect |
+|--------|--------|
+| Pinch (thumb tip to index tip) **+ middle/ring/pinky raised** | Grab the progress bar (three fingers up prevents accidental triggers) |
+| Hold pinch, move hand right | Seek forward |
+| Hold pinch, move hand left | Seek backward |
+| Release the pinch | Drop it, stay at the current spot |
+| ✊ Hold a fist ~0.5s | Toggle play / pause (fist again to toggle back) |
+| Open palm / hand out of frame | Resting pose, does nothing |
+
+Sensitivity: **the full camera width = the whole video**, so short videos are very sensitive and long videos jump far with one sweep.
+
+Start deadzone: small wobble right after pinching does **not** move the bar; scrubbing begins only once your hand has moved past a threshold (so it doesn't twitch the instant you pinch).
+
+## Settings
+
+Click the GestureSeek toolbar icon to open the popup. All sliders apply **live**:
+
+- **Start deadzone** — how far the hand must move before scrubbing begins (higher = steadier).
+- **Fist hold time** — how long a fist must be held to toggle play/pause.
+- **Fingers required to scrub** — 3 (fewest false triggers), 2 (easier to pose), or 1 (loosest).
+- **Pinch sensitivity** — thumb-to-index distance that counts as a pinch.
+- **Show camera preview + hand skeleton** — a small corner window showing the detected hand; handy while tuning, turn it off afterwards.
+
+## How it works
 
 ```
-youtube/bilibili 页面
- └─ content.js(内容脚本,隔离世界)
-     ├─ 定位主 <video>,注入一个扩展源 <iframe>(camera.html,1×1 近乎不可见)
-     ├─ 运行捏合状态机(gesture-core.js)
-     └─ 把目标时间写入 video.currentTime(节流 ≤20次/秒)
-   camera.html / camera.js(iframe,扩展源)
-     ├─ getUserMedia 开摄像头(扩展源可授权,且只问一次)
-     ├─ MediaPipe HandLandmarker(本地 wasm + 模型,绕开网站 CSP)
-     └─ 每帧把 {手x(已镜像), 捏合距离, 是否有手} 发回 content.js
+youtube.com / bilibili.com page
+ └─ content.js (content script, isolated world)
+     ├─ locate the main <video>, inject an extension-origin <iframe> (camera.html)
+     ├─ run the pinch state machine (gesture-core.js)
+     ├─ write video.currentTime to scrub (throttled), call video.play()/pause()
+     └─ read settings from chrome.storage; show errors via a small toast only
+   camera.html / camera.js (iframe, extension origin)
+     ├─ getUserMedia (camera) — extension origin, granted once, works on both sites
+     ├─ MediaPipe GestureRecognizer (local wasm + model; bypasses the page CSP)
+     └─ per frame, post {x (mirrored), pinch distance, fingers up, fist} to content.js
 ```
 
-- **为什么用 iframe 而不是 offscreen**:offscreen 文档是隐藏页,无法弹摄像头授权框;扩展源 iframe 既是可见文档(能授权)又受扩展 CSP(允许 wasm)管辖。
-- **隐私**:MediaPipe 运行时和模型全部打包在本地(`lib/`、`models/`),没有任何联网请求,摄像头数据不出本机。
+- **Why an iframe (not an offscreen document):** offscreen documents can't open the camera (they're hidden, so the permission prompt can't show). An extension-origin iframe is both a visible document (camera can be granted) and runs under the extension CSP (which allows the MediaPipe wasm).
+- **Engine:** MediaPipe **GestureRecognizer** gives the 21 hand landmarks (used for the pinch) plus a trained gesture label (`Closed_Fist`, used for play/pause). The older **HandLandmarker** is kept as a fallback — flip the `ENGINE` constant at the top of `camera.js`.
+- **Privacy:** the MediaPipe runtime and model are bundled locally (`lib/`, `models/`). There are no network requests; the webcam image never leaves the machine.
 
-## 开发
+## Development
 
 ```bash
-node tests/gesture-core.test.js   # 跑状态机单元测试
-node tools/gen-icons.js           # 重新生成图标
+node tests/gesture-core.test.js   # run the state-machine unit tests
+node tools/gen-icons.js           # regenerate the icons
 ```
 
-设计文档:`docs/superpowers/specs/2026-06-07-gesture-seek-design.md`
+Design docs: `docs/superpowers/specs/`.
 
-## 已知限制
+## Known limitations
 
-- 只支持 youtube.com 和 bilibili.com。
-- 需要 USB / 内置摄像头,且光线足够让 MediaPipe 识别到手。
-- 直播(无固定 duration)无法拖动进度。
+- Only youtube.com and bilibili.com.
+- Needs a USB / built-in webcam and enough light for MediaPipe to see the hand.
+- Live streams (no fixed duration) can't be scrubbed; play/pause still works.

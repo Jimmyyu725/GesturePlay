@@ -1,132 +1,140 @@
-# GestureSeek — 握拳切换播放/暂停 + 修复握拳误判(v0.5)
+# GestureSeek — Fist toggles play/pause + fix fist-misread-as-pinch (v0.5)
 
-> 日期:2026-06-07
-> 状态:已 brainstorm 通过,待实现
-> 关联:扩展自 `2026-06-07-gesture-seek-design.md`
+> Date: 2026-06-07
+> Status: Passed brainstorm, pending implementation
+> Related: extends `2026-06-07-gesture-seek-design.md`
 
 ---
 
-## 1. 目标
+## 1. Goals
 
-1. **新功能**:**握拳 ✊ = 切换 播放/暂停**(toggle);张开手掌 = 中性(休息位,不触发)。
-2. **修 bug**:当前握拳时拇指尖与食指尖靠近,被误判为捏合 → 误触发拖进度。修复后握拳不再误触发。
+1. **New feature:** **fist ✊ = toggle play/pause**; open palm = neutral (resting pose, no action).
+2. **Bug fix:** today a fist brings the thumb tip and index tip close together and is misread as a pinch → it falsely triggers scrubbing. After the fix, a fist no longer triggers it.
 
-用户选择:
-- 播放/暂停映射 = **握拳切换**(方案 A),避免"张开=播放"在休息位被误触发。
-- 识别引擎 = **GestureRecognizer(方案②)** 现用;**HandLandmarker(方案①)** 保留,常量可切换。
+User choices:
+- Play/pause mapping = **fist toggles** (option A), to avoid "open palm = play" firing in the resting pose.
+- Detection engine = **GestureRecognizer (option ②)** active; **HandLandmarker (option ①)** retained, switchable via a constant.
 
-## 2. 关键洞察:bug 与新功能同源
+## 2. Key insight: the bug and the feature share a root cause
 
-当前捏合判定只看"拇指尖↔食指尖距离 < 阈值"。握拳时这两指尖也靠近 → 误判捏合。要可靠识别握拳,必须能区分"捏合 vs 握拳",而这恰好修掉 bug。用 GestureRecognizer 的训练好标签 `Closed_Fist` 来判握拳,既准又顺手解决。
+The current pinch test only checks "thumb tip ↔ index tip distance < threshold". A fist also brings those tips close → misread as a pinch. Reliably recognizing a fist requires distinguishing "pinch vs fist", which is exactly what fixes the bug. Use GestureRecognizer's trained `Closed_Fist` label for the fist — accurate, and it solves the bug along the way.
 
-## 3. 手势引擎(双保留,常量切换)
+## 3. Detection engine (both retained, switchable via a constant)
 
-`camera.js` 顶部常量 `ENGINE`:
-- `"gesture"`(**默认 = 方案②**):`GestureRecognizer` + `models/gesture_recognizer.task`,`recognizeForVideo()`。返回**手势标签 + 21 关键点**。
-- `"landmarker"`(**保留 = 方案①**):现有 `HandLandmarker` + `models/hand_landmarker.task`,`detectForVideo()`。只有捏合、无握拳(等于当前行为)。
+Constant `ENGINE` at the top of `camera.js`:
+- `"gesture"` (**default = option ②**): `GestureRecognizer` + `models/gesture_recognizer.task`, `recognizeForVideo()`. Returns **a gesture label + 21 landmarks**.
+- `"landmarker"` (**retained = option ①**): the existing `HandLandmarker` + `models/hand_landmarker.task`, `detectForVideo()`. Pinch only, no fist (i.e. the current behavior).
 
-两个模型都打包;切换只改这一个常量。GPU delegate(回退 CPU)两者都用。
+Both models are bundled; switching changes only this one constant. GPU delegate (CPU fallback) applies to both.
 
-### GestureRecognizer 返回结构(已核验)
-- `result.landmarks[handIndex][pointIndex] = {x, y, z}`,x/y 归一化 [0,1]。
-- `result.gestures[handIndex][0].categoryName`:8 种之一(`None`/`Closed_Fist`/`Open_Palm`/`Pointing_Up`/`Thumb_Up`/`Thumb_Down`/`Victory`/`ILoveYou`)——**无 "pinch"**。
-- 取置信度最高的一只手(`numHands: 1`)。
+### GestureRecognizer result shape (verified)
+- `result.landmarks[handIndex][pointIndex] = {x, y, z}`, x/y normalized [0,1].
+- `result.gestures[handIndex][0].categoryName`: one of 8 (`None`/`Closed_Fist`/`Open_Palm`/`Pointing_Up`/`Thumb_Up`/`Thumb_Down`/`Victory`/`ILoveYou`) — **no "pinch"**.
+- Take the highest-confidence hand (`numHands: 1`).
 
-## 4. 三件事各自的来源
+## 4. Where each of the three things comes from
 
-| 手势 | 来源 | 动作 |
-|------|------|------|
-| 捏合拖进度 | **关键点**:拇指尖(4)↔食指尖(8)距离,镜像 x(同现状) | 拖 `currentTime` |
-| 握拳切换 | **标签** `categoryName === "Closed_Fist"` | `video.play()/pause()` 切换 |
-| 张开 / 其它 | 中性 | 无 |
+| Gesture | Source | Action |
+|---------|--------|--------|
+| Pinch to scrub | **Landmarks**: thumb tip (4) ↔ index tip (8) distance, mirrored x (unchanged) | drag `currentTime` |
+| Fist toggle | **Label** `categoryName === "Closed_Fist"` | `video.play()/pause()` toggle |
+| Open palm / other | Neutral | none |
 
-## 5. 每帧消息(camera.js → content.js)
+## 5. Per-frame message (camera.js → content.js)
 
 `{ type:"gs-frame", x, d, present, fist }`
-- `x` = 镜像后手 x(0~1),`d` = 拇指-食指归一化距离,`present` = 是否有手。
-- `fist` = `(ENGINE==="gesture") && categoryName==="Closed_Fist"`;`landmarker` 引擎下恒 `false`。
+- `x` = mirrored hand x (0..1), `d` = normalized thumb-index distance, `present` = whether a hand is seen.
+- `fist` = `(ENGINE==="gesture") && categoryName==="Closed_Fist"`; always `false` under the `landmarker` engine.
 
-## 6. 判定逻辑(gesture-core.js,纯函数、可单测)
+## 6. Decision logic (gesture-core.js, pure functions, unit-testable)
 
-捏合状态机保持不变,**新增握拳处理**:
+The pinch state machine is unchanged; **fist handling is added**:
 
 ```
-输入每帧:{x, d, present, fist}, video:{currentTime, duration, paused?}
+input per frame: {x, d, present, fist}, video:{currentTime, duration, paused?}
 
-// 捏合(拖进度):不变。但 fist 为 true 时不进入 DRAGGING(因为握拳≠捏合)
-//   —— 实际上 GestureRecognizer 下握拳=Closed_Fist,与捏合互斥;
-//      gesture-core 仍显式:进入 DRAGGING 需要 !fist,彻底挡掉误触发。
+// Pinch (scrub): unchanged. But do NOT enter DRAGGING while fist is true
+//   (fist ≠ pinch). Under GestureRecognizer a fist is Closed_Fist, mutually
+//   exclusive with a pinch; gesture-core still explicitly requires !fist to
+//   enter DRAGGING, fully blocking the false trigger.
 
-// 握拳切换(去抖 + 边沿 + 拖动中屏蔽):
-fistStableFrames:若 fist 持续为 true 累加,否则清零
-canToggle:一个布尔"闸门",握拳触发后置 false,必须经历一帧 !fist 才复位为 true
+// Fist toggle (debounce + edge + suppressed while dragging):
+fistStableFrames: increments while fist is true, resets otherwise
+canToggle: a boolean gate; set false after a toggle fires, only a non-fist frame re-arms it
 
-每帧:
-  if state==DRAGGING: 不处理握拳(拖动中不切),且 fist 不应为真(互斥)
+each frame:
+  if state==DRAGGING: ignore fist (don't toggle mid-scrub); fist shouldn't be true anyway (exclusive)
   else if fist:
-     if 持续时间 ≥ HOLD(约0.35s,按帧数≈ HOLD_FRAMES) 且 canToggle:
-        输出 togglePlay = true(仅这一帧)
+     if held ≥ HOLD (~0.35s, ≈ HOLD_FRAMES frames) and canToggle:
+        emit togglePlay = true (this frame only)
         canToggle = false
-  else (非握拳):
-     canToggle = true(松开后才能再次触发)
+  else (not a fist):
+     canToggle = true (must release before it can fire again)
      fistStableFrames = 0
 ```
 
-输出新增字段:`togglePlay: boolean`(那一帧是否要切换播放/暂停)。捏合输出 `seekTo` 不变。
+New output field: `togglePlay: boolean` (whether to toggle play/pause this frame). The pinch output `seekTo` is unchanged.
 
-**互斥保证**:捏合进入条件加 `!fist`;握拳处理只在非 DRAGGING 时进行。两者不会同帧都触发。
+**Mutual exclusion:** pinch entry adds `!fist`; fist handling only runs while not DRAGGING. The two never fire on the same frame.
 
 ## 7. content.js
 
-- 收 `gs-frame` → `machine.update(...)`:
-  - `res.seekTo != null` → 拖进度(同现状,自适应节流 + 松手精确落点)。
-  - `res.togglePlay === true` → `v.paused ? v.play() : v.pause()`(忽略 play() 的 promise 拒绝)。同时 `nudgeControls(v)` 让原生 UI 可见。
-- 不加任何自定义 UI;播放/暂停用网站原生动画。
+- On `gs-frame` → `machine.update(...)`:
+  - `res.seekTo != null` → scrub (unchanged: adaptive throttle + precise commit on release).
+  - `res.togglePlay === true` → `v.paused ? v.play() : v.pause()` (ignore play()'s promise rejection). Also `nudgeControls(v)` to reveal the native UI.
+- No custom UI; play/pause uses the site's native animation.
 
-## 8. 防误触参数(初值)
+## 8. Anti-false-trigger parameters (initial)
 
-- `HOLD_FRAMES`:约 0.35s。检测节流为 30fps(setTimeout 33ms)→ 约 10 帧。用时间戳更稳:记录握拳开始时间,持续 ≥ 350ms 触发。
-- 边沿:一次握拳只切一次;必须出现一帧非握拳才允许下次。
-- 拖动中(DRAGGING)不响应握拳。
+- `HOLD_FRAMES`: ~0.35s. Detection is throttled to 30fps (setTimeout 33ms) → ~10 frames.
+- Edge: one fist toggles once; a non-fist frame must appear before the next.
+- No fist response while DRAGGING.
 
-## 9. 边界与回归
+## 9. Edge cases & regression
 
-| 情况 | 处理 |
-|------|------|
-| 捏合释放瞬间手型经过类拳形 | 去抖(350ms)+ 边沿 → 不误切 |
-| 握拳一直保持 | 只切一次(边沿),不连续切 |
-| `landmarker` 引擎(方案①) | `fist` 恒 false → 无握拳功能,捏合行为同现状 |
-| 直播 / duration 无效 | 捏合不触发(同现状);握拳切换仍可用(play/pause 与 duration 无关) |
-| 两只手 | `numHands:1`,取置信度最高 |
+| Case | Handling |
+|------|----------|
+| Hand passes through a fist-like shape while releasing a pinch | debounce (350ms) + edge → no false toggle |
+| Fist held continuously | toggles once (edge), not repeatedly |
+| `landmarker` engine (option ①) | `fist` always false → no fist feature, pinch behavior unchanged |
+| Live / invalid duration | pinch doesn't trigger (unchanged); fist toggle still works (play/pause is independent of duration) |
+| Two hands | `numHands:1`, take the highest confidence |
 
-## 10. 测试(gesture-core.test.js 扩展)
+## 10. Tests (gesture-core.test.js extension)
 
-- 握拳稳定保持 ≥ 阈值 → `togglePlay` 仅触发一次(边沿)。
-- 握拳保持但未到阈值 → 不触发。
-- 触发后继续保持 → 不再触发;松开(非握拳一帧)后再次握拳 → 再触发一次。
-- DRAGGING 中 fist=true → 不 toggle、不影响拖动(且捏合进入要求 !fist)。
-- 现有 26 项捏合测试保持全绿。
+- Fist held ≥ threshold → `togglePlay` fires exactly once (edge).
+- Fist held but below threshold → no toggle.
+- After firing, keep holding → no re-toggle; release (a non-fist frame) then fist again → toggles once more.
+- fist=true while DRAGGING → no toggle, doesn't affect the drag (and pinch entry requires !fist).
+- The existing 26 pinch tests stay green.
 
-## 10b. v0.5.1:捏合需"三指竖起"才触发(降误触)
+## 10b. v0.5.1: pinch requires "three fingers up" to trigger (cut false triggers)
 
-用户反馈:只看拇指-食指距离时误触率高(手放嘴边等也被当捏合)。改为**进入拖动需要刻意姿势**:拇指+食指捏合 **且 中/无名/小指都竖起**。
+User feedback: checking only thumb-index distance had a high false-trigger rate (a hand resting near the face was treated as a pinch). Changed so that **entering a drag requires a deliberate pose**: thumb + index pinched **and middle/ring/pinky all raised**.
 
-- camera.js 用关键点算三指伸展数 `ext`(0~3):某指**指尖离手腕距离 > 该指 PIP 离手腕距离** = 伸直(2D,旋转无关)。随帧发 `ext`。
-- gesture-core 进入 DRAGGING 增加条件 `frame.ext >= requiredFingers`(默认 3)。**仅入口检查**:一旦拖动,手指轻微抖动不会中断(继续只看捏合距离)。
-- 向后兼容:`frame.ext` 缺省时跳过该门槛(旧测试不受影响)。
-- 测试:`ext>=3` 进入;`ext∈{0,1,2}` 不进入;入口后 `ext` 掉到 0 仍继续拖;缺省 ext 仍可进入。
+- camera.js computes the extended-finger count `ext` (0–3) from landmarks: a finger is extended when **its tip is farther from the wrist than its PIP joint** (2D, rotation-invariant). Sent with each frame.
+- gesture-core adds the entry condition `frame.ext >= requiredFingers` (default 3). **Entry-only:** once dragging, a finger wobble won't interrupt it (continuation only checks the pinch distance).
+- Backward compatible: when `frame.ext` is absent, the gate is skipped (old tests unaffected).
+- Tests: `ext>=3` enters; `ext∈{0,1,2}` does not; after entry `ext` dropping to 0 keeps dragging; absent ext still enters.
 
-## 10c. v0.5.2:起步死区(刚捏合不动,手移动够大才拖)
+## 10c. v0.5.2: start deadzone (no movement right after the pinch; scrub only once the hand moves enough)
 
-用户反馈:刚捏合时进度条会因微小晃动而抖动。增加**起步激活死区**:
+User feedback: the bar twitches from tiny movement the instant you pinch. Added a **start activation deadzone**:
 
-- 进入 DRAGGING 后先 `dragActive=false`,不出 `seekTo`;当 `|xSmooth − anchorX| ≥ deadzone`(默认 0.05 归一化宽度)才 `dragActive=true` 开始拖。
-- 激活时把 deadzone **折进锚点**(`anchorX += ±deadzone`):激活瞬间不跳变,且死区之外的位移完整保留(eff = raw − deadzone)。
-- **仅起步检查**:激活后正常 1:1 跟随(死区不再生效),手回拉也不会因再次进死区而抖。
-- 释放/reset 清 `dragActive`。`deadzone:0` 关闭(测试用)。
+- After entering DRAGGING, `dragActive=false` and no `seekTo` is emitted; only when `|xSmooth − anchorX| ≥ deadzone` (default 0.05 normalized width) does `dragActive=true` and scrubbing begin.
+- On activation, the deadzone is **folded into the anchor** (`anchorX += ±deadzone`): no jump at activation, and movement beyond the deadzone is fully preserved (eff = raw − deadzone).
+- **Entry-only:** after activation it tracks 1:1 (deadzone no longer applies), so pulling the hand back won't jitter by re-entering the deadzone.
+- Release/reset clears `dragActive`. `deadzone:0` disables it (used by tests).
 
-## 11. 不做(YAGNI)
+## 11. Out of scope (YAGNI)
 
-- 不用 `Open_Palm` 做任何动作(握拳已能双向切换)。
-- 不为播放/暂停加自定义 UI(用原生)。
-- 不做其它手势(👍👎✌️ 等)。
+- Don't use `Open_Palm` for anything (the fist already toggles both ways).
+- No custom UI for play/pause (use native).
+- No other gestures (👍👎✌️ etc.).
+
+## 12. v0.6.0: settings popup + optional camera/skeleton preview
+
+Borrowed from reviewing another extension ("YouTube Shorts Gesture Control"). Two additions:
+
+- **Settings popup (sliders, apply live):** start deadzone, fist hold time (seconds → `holdFrames`), fingers required to scrub (1–3 → `requiredFingers`), pinch sensitivity (`pinchOn`, with `pinchOff = pinchOn + 0.02`). popup.js writes to `chrome.storage.local`; content.js reads them, rebuilds the gesture machine on change, and re-applies live. The preview toggle is a **pure UI change** and does NOT rebuild the machine (so it never drops an in-progress gesture).
+- **Optional camera + skeleton preview:** a popup toggle. When on, content.js resizes the camera iframe into a visible 240×180 corner window and tells camera.js (via a `gs-preview` message, resent on `gs-ready`) to draw the mirrored webcam + 21-point hand skeleton onto a canvas. Off by default; useful while tuning. (Not painted in real fullscreen — acceptable for a debug aid.)

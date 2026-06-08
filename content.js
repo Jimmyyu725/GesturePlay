@@ -16,7 +16,7 @@
     return;
   }
 
-  const machine = GC.createMachine();
+  let machine = GC.createMachine(); // recreated when settings change
   const SEEK_MS_PLAYING = 50; // <=20/sec: smooth scrub while playing
   const SEEK_MS_PAUSED = 140; // ~7/sec: paused video must decode each seek; don't flood it
   const NUDGE_MS = 500; // how often to reveal native controls during a drag
@@ -35,6 +35,41 @@
   let wasDragging = false;
   let lastTarget = null;
   let firstRunHintChecked = false;
+  let previewOn = false; // debug camera/skeleton preview (popup setting)
+
+  // --- settings (popup -> chrome.storage -> here) --------------------------
+  const SETTINGS_DEFAULTS = { gsDeadzone: 0.05, gsHold: 0.35, gsFingers: 3, gsPinch: 0.05, gsPreview: false };
+
+  // Rebuild the gesture machine from the tuning settings. Only call this when a
+  // gesture-affecting key actually changed — recreating the machine resets any
+  // in-progress drag/fist, so we must NOT do it for the preview toggle alone.
+  function applyMachine(s) {
+    const pinchOn = typeof s.gsPinch === "number" ? s.gsPinch : 0.05;
+    machine = GC.createMachine({
+      deadzone: typeof s.gsDeadzone === "number" ? s.gsDeadzone : 0.05,
+      holdFrames: Math.max(1, Math.round((typeof s.gsHold === "number" ? s.gsHold : 0.35) * 30)),
+      requiredFingers: typeof s.gsFingers === "number" ? s.gsFingers : 3,
+      pinchOn: pinchOn,
+      pinchOff: pinchOn + 0.02,
+    });
+  }
+
+  // Pure UI: show/hide the preview window. Does NOT touch the gesture machine.
+  function applyPreview(s) {
+    previewOn = !!s.gsPreview;
+    sizeIframe();
+    postPreview();
+  }
+
+  function loadSettings(cb) {
+    try {
+      chrome.storage.local.get(SETTINGS_DEFAULTS, function (s) {
+        cb(Object.assign({}, SETTINGS_DEFAULTS, s));
+      });
+    } catch (e) {
+      /* storage unavailable */
+    }
+  }
 
   // --- which pages should activate -----------------------------------------
   function isVideoPage() {
@@ -108,22 +143,55 @@
     el.setAttribute("tabindex", "-1");
     el.setAttribute("title", "GestureSeek camera");
     // Keep it rendered (NOT display:none/visibility:hidden — that would suspend
-    // the camera track). A 2px near-transparent frame is enough.
+    // the camera track). Size/opacity are set by sizeIframe() (tiny when hidden,
+    // a visible corner window when the debug preview is on).
     Object.assign(el.style, {
       position: "fixed",
-      width: "2px",
-      height: "2px",
-      right: "0px",
-      bottom: "0px",
-      opacity: "0.01",
       border: "0",
       padding: "0",
       margin: "0",
-      zIndex: "-2147483647",
       pointerEvents: "none",
     });
     (document.body || document.documentElement).appendChild(el);
     iframe = el;
+    sizeIframe();
+  }
+
+  // Tiny & invisible normally; a visible 240x180 corner window when preview is on.
+  function sizeIframe() {
+    if (!iframe) return;
+    if (previewOn) {
+      Object.assign(iframe.style, {
+        width: "240px",
+        height: "180px",
+        right: "12px",
+        bottom: "12px",
+        opacity: "1",
+        borderRadius: "10px",
+        boxShadow: "0 6px 20px rgba(0,0,0,.45)",
+        zIndex: "2147483646",
+      });
+    } else {
+      Object.assign(iframe.style, {
+        width: "2px",
+        height: "2px",
+        right: "0px",
+        bottom: "0px",
+        opacity: "0.01",
+        borderRadius: "0",
+        boxShadow: "none",
+        zIndex: "-2147483647",
+      });
+    }
+  }
+
+  function postPreview() {
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage({ type: "gs-preview", on: previewOn }, EXT_ORIGIN || "*");
+    } catch (e) {
+      /* iframe not ready yet; gs-ready will trigger a resend */
+    }
   }
 
   function removeIframe() {
@@ -249,7 +317,7 @@
     try {
       chrome.storage.local.get("gsHintShown", function (r) {
         if (!r || !r.gsHintShown) {
-          toast("GestureSeek:即将请求摄像头权限,请点击「允许」(只问一次,画面仅本地处理、不上传)", 9000);
+          toast("GestureSeek: about to request camera access — click Allow (asked once; video is processed locally and never uploaded)", 9000);
           try {
             chrome.storage.local.set({ gsHintShown: true });
           } catch (e) {}
@@ -271,21 +339,22 @@
       onFrame(msg);
     } else if (msg.type === "gs-error") {
       handleError(String(msg.message || ""));
+    } else if (msg.type === "gs-ready") {
+      postPreview(); // iframe is now listening; send the current preview state
     }
-    // gs-ready: nothing to do (no UI during normal use)
   });
 
   function handleError(m) {
     if (m.indexOf("camera-denied") === 0) {
-      toast("GestureSeek:摄像头未授权。请点地址栏左侧的摄像头图标改为「允许」,然后刷新页面。", 12000);
+      toast("GestureSeek: camera blocked. Click the camera icon on the left of the address bar, set it to Allow, then reload the page.", 12000);
     } else if (m.indexOf("camera-lost") === 0) {
-      toast("GestureSeek:摄像头连接已断开,请重新连接后刷新页面。", 12000);
+      toast("GestureSeek: camera disconnected. Reconnect it, then reload the page.", 12000);
     } else if (m.indexOf("model-load-failed") === 0) {
-      toast("GestureSeek:手势模型加载失败,请刷新页面重试。", 12000);
+      toast("GestureSeek: failed to load the hand model. Reload the page to try again.", 12000);
     } else if (m.indexOf("detect-failed") === 0) {
-      toast("GestureSeek:手势识别异常,请刷新页面重试。", 12000);
+      toast("GestureSeek: hand detection error. Reload the page to try again.", 12000);
     } else {
-      toast("GestureSeek:初始化失败 — " + m, 10000);
+      toast("GestureSeek: initialization failed — " + m, 10000);
     }
   }
 
@@ -330,6 +399,27 @@
   }, 700);
   window.addEventListener("popstate", onNavigate);
   window.addEventListener("yt-navigate-finish", onNavigate);
+
+  // Settings: load now, and re-apply live whenever the popup changes them.
+  loadSettings(function (s) {
+    applyMachine(s);
+    applyPreview(s);
+  });
+  try {
+    chrome.storage.onChanged.addListener(function (changes, area) {
+      if (area !== "local") return;
+      // Only rebuild the machine for gesture-affecting keys (preserves any
+      // in-progress gesture when the user just flips the preview toggle).
+      if (changes.gsDeadzone || changes.gsHold || changes.gsFingers || changes.gsPinch) {
+        loadSettings(applyMachine);
+      }
+      if (changes.gsPreview) {
+        loadSettings(applyPreview);
+      }
+    });
+  } catch (e) {
+    /* storage unavailable */
+  }
 
   sync();
 })();

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "GestureSeek",
-  "version": "0.5.2",
-  "description": "用 USB 摄像头手势控制 YouTube / Bilibili:捏合拖动进度条,握拳切换播放/暂停。",
+  "version": "0.6.0",
+  "description": "Control YouTube / Bilibili with webcam hand gestures: pinch to drag the progress bar, make a fist to play/pause.",
   "permissions": ["storage"],
   "icons": {
     "16": "icons/icon16.png",
