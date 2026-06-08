@@ -1,13 +1,12 @@
 // content.js — injected into youtube.com / bilibili.com (isolated world).
 // Owns: deciding whether this is a video page, locating the <video>, injecting
-// the camera iframe, running the gesture state machine, writing currentTime, and
-// drawing the drag overlay (progress bar). All DOM writes avoid parser sinks
-// (no innerHTML/srcdoc) so YouTube's Trusted Types CSP can't block us.
+// the camera iframe, running the gesture state machine, and writing currentTime.
+// It draws NO UI of its own: scrubbing moves the site's OWN native progress bar
+// (because we set video.currentTime), and during a drag we nudge the player so
+// the native controls stay visible. All DOM writes avoid parser sinks.
 //
-// Fullscreen note: detection survives fullscreen because camera.js drives its
-// loop off a timer (not rAF), so the camera iframe can stay on <body> even when
-// it isn't painted. Only the visible overlay needs to be hosted under the
-// fullscreen element to be seen.
+// Detection survives fullscreen because camera.js drives its loop off a timer
+// (not rAF), so the camera iframe can stay on <body> even when not painted.
 (function () {
   "use strict";
 
@@ -20,6 +19,7 @@
   const machine = GC.createMachine();
   const SEEK_MS_PLAYING = 50; // <=20/sec: smooth scrub while playing
   const SEEK_MS_PAUSED = 140; // ~7/sec: paused video must decode each seek; don't flood it
+  const NUDGE_MS = 500; // how often to reveal native controls during a drag
   const EXT_ORIGIN = (function () {
     try {
       return new URL(chrome.runtime.getURL("")).origin;
@@ -31,6 +31,7 @@
   let iframe = null;
   let cachedVideo = null;
   let lastSeekAt = 0;
+  let lastNudgeAt = 0;
   let wasDragging = false;
   let lastTarget = null;
   let firstRunHintChecked = false;
@@ -61,7 +62,7 @@
     return false;
   }
 
-  // --- fullscreen host for the visible overlay -----------------------------
+  // --- fullscreen host for the (failure-only) toast ------------------------
   function fsElement() {
     return document.fullscreenElement || document.webkitFullscreenElement || null;
   }
@@ -131,117 +132,29 @@
     machine.reset();
     wasDragging = false;
     lastTarget = null;
-    hideOverlay();
   }
 
-  // --- drag overlay (progress bar + time) ----------------------------------
-  let ov = null;
-  let ovFill = null;
-  let ovLabel = null;
-  let ovHideTimer = 0;
-
-  function buildOverlay() {
-    ov = document.createElement("div");
-    Object.assign(ov.style, {
-      position: "fixed",
-      display: "none",
-      alignItems: "center",
-      gap: "12px",
-      width: "min(560px, 72vw)",
-      padding: "10px 16px",
-      background: "rgba(18,18,24,0.86)",
-      borderRadius: "12px",
-      zIndex: "2147483647",
-      pointerEvents: "none",
-      boxShadow: "0 6px 24px rgba(0,0,0,.45)",
-      boxSizing: "border-box",
-      transform: "translateX(-50%)",
-    });
-
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      position: "relative",
-      flex: "1",
-      height: "6px",
-      borderRadius: "3px",
-      background: "rgba(255,255,255,0.28)",
-      overflow: "hidden",
-    });
-    ovFill = document.createElement("div");
-    Object.assign(ovFill.style, {
-      position: "absolute",
-      left: "0",
-      top: "0",
-      bottom: "0",
-      width: "0%",
-      borderRadius: "3px",
-      background: "linear-gradient(90deg,#7c3aed,#2563eb)",
-    });
-    track.appendChild(ovFill);
-
-    ovLabel = document.createElement("div");
-    Object.assign(ovLabel.style, {
-      color: "#fff",
-      font: "600 13px/1 ui-monospace, monospace",
-      whiteSpace: "nowrap",
-      minWidth: "108px",
-      textAlign: "right",
-    });
-
-    ov.appendChild(track);
-    ov.appendChild(ovLabel);
-  }
-
-  function fmt(s) {
-    if (!isFinite(s) || s < 0) s = 0;
-    s = Math.floor(s);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const ss = s % 60;
-    const p = function (n) {
-      return n < 10 ? "0" + n : "" + n;
-    };
-    return h > 0 ? h + ":" + p(m) + ":" + p(ss) : m + ":" + p(ss);
-  }
-
-  function showOverlay(v, fraction, targetSec, durationSec) {
-    if (!ov) buildOverlay();
-    const fe = fsElement();
-    if (fe && fe.tagName !== "VIDEO") {
-      // Real fullscreen on a container: host inside it and position relative to
-      // it (robust to any transform on the host; the host fills the screen).
-      if (ov.parentElement !== fe) fe.appendChild(ov);
-      ov.style.position = "absolute";
-      ov.style.left = "50%";
-      ov.style.top = "auto";
-      ov.style.bottom = "12%";
-    } else {
-      // Normal layout (or CSS web-fullscreen / bare-video FS): host on body and
-      // position over the video via its viewport rect.
-      const host = document.body || document.documentElement;
-      if (ov.parentElement !== host) host.appendChild(ov);
+  // --- reveal the site's NATIVE controls (so its own progress bar shows) ----
+  // YouTube/Bilibili auto-hide controls while playing; a synthetic mousemove
+  // over the player keeps the native progress bar + time visible during a drag,
+  // so the user sees the site's OWN bar move (we add no bar of our own).
+  function nudgeControls(v) {
+    const now = performance.now();
+    if (now - lastNudgeAt < NUDGE_MS) return;
+    lastNudgeAt = now;
+    try {
       const r = v.getBoundingClientRect();
-      const lift = Math.max(72, r.height * 0.16); // clear the native control bar
-      ov.style.position = "fixed";
-      ov.style.left = Math.round(r.left + r.width / 2) + "px";
-      ov.style.top = Math.round(r.top + r.height - lift) + "px";
-      ov.style.bottom = "auto";
+      const ev = new MouseEvent("mousemove", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: Math.round(r.left + r.width / 2),
+        clientY: Math.round(r.top + r.height / 2),
+      });
+      v.dispatchEvent(ev);
+    } catch (e) {
+      /* ignore */
     }
-    ov.style.display = "flex";
-    ovFill.style.width = Math.round(GC.clamp01(fraction) * 100) + "%";
-    ovLabel.textContent = fmt(targetSec) + " / " + fmt(durationSec);
-    clearTimeout(ovHideTimer);
-  }
-
-  function hideOverlaySoon() {
-    if (!ov || ov.style.display === "none") return;
-    clearTimeout(ovHideTimer);
-    ovHideTimer = setTimeout(hideOverlay, 700);
-  }
-
-  function hideOverlay() {
-    clearTimeout(ovHideTimer);
-    if (ov) ov.style.display = "none";
   }
 
   // --- per-frame handling --------------------------------------------------
@@ -252,7 +165,6 @@
 
     if (res.state === "DRAGGING") {
       wasDragging = true;
-      // Skip entry/transient frames (fraction null) to avoid a 0/0 overlay flicker.
       if (res.fraction != null && res.seekTo != null && GC.isFiniteNum(res.seekTo)) {
         lastTarget = res.seekTo;
         const throttle = v.paused ? SEEK_MS_PAUSED : SEEK_MS_PLAYING;
@@ -265,11 +177,11 @@
           }
           lastSeekAt = now;
         }
-        showOverlay(v, res.fraction, res.seekTo, v.duration);
+        nudgeControls(v); // keep the native progress bar visible while dragging
       }
     } else {
       // Released: commit the final precise position (covers throttled-away last
-      // write, important while paused), then hide the overlay.
+      // write, important while paused).
       if (wasDragging && lastTarget != null) {
         try {
           v.currentTime = lastTarget;
@@ -277,7 +189,6 @@
       }
       wasDragging = false;
       lastTarget = null;
-      hideOverlaySoon();
     }
   }
 
@@ -308,7 +219,7 @@
     const fe = fsElement();
     const host = fe && fe.tagName !== "VIDEO" ? fe : document.body || document.documentElement;
     if (toastEl.parentElement !== host) host.appendChild(toastEl);
-    toastEl.style.position = host === document.body || host === document.documentElement ? "fixed" : "absolute";
+    toastEl.style.position = host === (document.body || document.documentElement) ? "fixed" : "absolute";
     toastEl.textContent = text; // textContent is Trusted-Types safe
     toastEl.style.display = "block";
     clearTimeout(toastTimer);
@@ -393,7 +304,6 @@
     cachedVideo = null;
     wasDragging = false;
     lastTarget = null;
-    hideOverlay();
     sync();
   }
   let lastHref = location.href;
