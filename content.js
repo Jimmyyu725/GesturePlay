@@ -1,8 +1,13 @@
 // content.js — injected into youtube.com / bilibili.com (isolated world).
 // Owns: deciding whether this is a video page, locating the <video>, injecting
-// the camera iframe, running the gesture state machine, and writing currentTime.
-// All DOM writes avoid parser sinks (no innerHTML/srcdoc) so YouTube's Trusted
-// Types CSP can't block us.
+// the camera iframe, running the gesture state machine, writing currentTime, and
+// drawing the drag overlay (progress bar). All DOM writes avoid parser sinks
+// (no innerHTML/srcdoc) so YouTube's Trusted Types CSP can't block us.
+//
+// Fullscreen note: detection survives fullscreen because camera.js drives its
+// loop off a timer (not rAF), so the camera iframe can stay on <body> even when
+// it isn't painted. Only the visible overlay needs to be hosted under the
+// fullscreen element to be seen.
 (function () {
   "use strict";
 
@@ -13,7 +18,8 @@
   }
 
   const machine = GC.createMachine();
-  const MIN_SEEK_MS = 50; // throttle currentTime writes to <=20/sec
+  const SEEK_MS_PLAYING = 50; // <=20/sec: smooth scrub while playing
+  const SEEK_MS_PAUSED = 140; // ~7/sec: paused video must decode each seek; don't flood it
   const EXT_ORIGIN = (function () {
     try {
       return new URL(chrome.runtime.getURL("")).origin;
@@ -25,6 +31,8 @@
   let iframe = null;
   let cachedVideo = null;
   let lastSeekAt = 0;
+  let wasDragging = false;
+  let lastTarget = null;
   let firstRunHintChecked = false;
 
   // --- which pages should activate -----------------------------------------
@@ -51,6 +59,11 @@
       );
     }
     return false;
+  }
+
+  // --- fullscreen host for the visible overlay -----------------------------
+  function fsElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
   }
 
   // --- video targeting -----------------------------------------------------
@@ -83,7 +96,7 @@
     return cachedVideo;
   }
 
-  // --- camera iframe -------------------------------------------------------
+  // --- camera iframe (lives on <body>; detection is paint-independent) ------
   function ensureIframe() {
     if (iframe && iframe.isConnected) return;
     maybeShowFirstRunHint();
@@ -93,9 +106,8 @@
     el.setAttribute("aria-hidden", "true");
     el.setAttribute("tabindex", "-1");
     el.setAttribute("title", "GestureSeek camera");
-    // IMPORTANT: keep this rendered. Never switch to display:none or
-    // visibility:hidden — that suspends the camera MediaStreamTrack and gestures
-    // stop. A 2px, near-transparent, non-interactive frame keeps the track live.
+    // Keep it rendered (NOT display:none/visibility:hidden — that would suspend
+    // the camera track). A 2px near-transparent frame is enough.
     Object.assign(el.style, {
       position: "fixed",
       width: "2px",
@@ -117,6 +129,119 @@
     if (iframe && iframe.isConnected) iframe.remove();
     iframe = null;
     machine.reset();
+    wasDragging = false;
+    lastTarget = null;
+    hideOverlay();
+  }
+
+  // --- drag overlay (progress bar + time) ----------------------------------
+  let ov = null;
+  let ovFill = null;
+  let ovLabel = null;
+  let ovHideTimer = 0;
+
+  function buildOverlay() {
+    ov = document.createElement("div");
+    Object.assign(ov.style, {
+      position: "fixed",
+      display: "none",
+      alignItems: "center",
+      gap: "12px",
+      width: "min(560px, 72vw)",
+      padding: "10px 16px",
+      background: "rgba(18,18,24,0.86)",
+      borderRadius: "12px",
+      zIndex: "2147483647",
+      pointerEvents: "none",
+      boxShadow: "0 6px 24px rgba(0,0,0,.45)",
+      boxSizing: "border-box",
+      transform: "translateX(-50%)",
+    });
+
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      position: "relative",
+      flex: "1",
+      height: "6px",
+      borderRadius: "3px",
+      background: "rgba(255,255,255,0.28)",
+      overflow: "hidden",
+    });
+    ovFill = document.createElement("div");
+    Object.assign(ovFill.style, {
+      position: "absolute",
+      left: "0",
+      top: "0",
+      bottom: "0",
+      width: "0%",
+      borderRadius: "3px",
+      background: "linear-gradient(90deg,#7c3aed,#2563eb)",
+    });
+    track.appendChild(ovFill);
+
+    ovLabel = document.createElement("div");
+    Object.assign(ovLabel.style, {
+      color: "#fff",
+      font: "600 13px/1 ui-monospace, monospace",
+      whiteSpace: "nowrap",
+      minWidth: "108px",
+      textAlign: "right",
+    });
+
+    ov.appendChild(track);
+    ov.appendChild(ovLabel);
+  }
+
+  function fmt(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const p = function (n) {
+      return n < 10 ? "0" + n : "" + n;
+    };
+    return h > 0 ? h + ":" + p(m) + ":" + p(ss) : m + ":" + p(ss);
+  }
+
+  function showOverlay(v, fraction, targetSec, durationSec) {
+    if (!ov) buildOverlay();
+    const fe = fsElement();
+    if (fe && fe.tagName !== "VIDEO") {
+      // Real fullscreen on a container: host inside it and position relative to
+      // it (robust to any transform on the host; the host fills the screen).
+      if (ov.parentElement !== fe) fe.appendChild(ov);
+      ov.style.position = "absolute";
+      ov.style.left = "50%";
+      ov.style.top = "auto";
+      ov.style.bottom = "12%";
+    } else {
+      // Normal layout (or CSS web-fullscreen / bare-video FS): host on body and
+      // position over the video via its viewport rect.
+      const host = document.body || document.documentElement;
+      if (ov.parentElement !== host) host.appendChild(ov);
+      const r = v.getBoundingClientRect();
+      const lift = Math.max(72, r.height * 0.16); // clear the native control bar
+      ov.style.position = "fixed";
+      ov.style.left = Math.round(r.left + r.width / 2) + "px";
+      ov.style.top = Math.round(r.top + r.height - lift) + "px";
+      ov.style.bottom = "auto";
+    }
+    ov.style.display = "flex";
+    ovFill.style.width = Math.round(GC.clamp01(fraction) * 100) + "%";
+    ovLabel.textContent = fmt(targetSec) + " / " + fmt(durationSec);
+    clearTimeout(ovHideTimer);
+  }
+
+  function hideOverlaySoon() {
+    if (!ov || ov.style.display === "none") return;
+    clearTimeout(ovHideTimer);
+    ovHideTimer = setTimeout(hideOverlay, 700);
+  }
+
+  function hideOverlay() {
+    clearTimeout(ovHideTimer);
+    if (ov) ov.style.display = "none";
   }
 
   // --- per-frame handling --------------------------------------------------
@@ -124,16 +249,35 @@
     const v = getVideo();
     if (!v) return;
     const res = machine.update(frame, { currentTime: v.currentTime, duration: v.duration });
-    if (res.seekTo != null && GC.isFiniteNum(res.seekTo)) {
-      const now = performance.now();
-      if (now - lastSeekAt >= MIN_SEEK_MS) {
-        try {
-          v.currentTime = res.seekTo;
-        } catch (e) {
-          /* ignore transient seek errors */
+
+    if (res.state === "DRAGGING") {
+      wasDragging = true;
+      // Skip entry/transient frames (fraction null) to avoid a 0/0 overlay flicker.
+      if (res.fraction != null && res.seekTo != null && GC.isFiniteNum(res.seekTo)) {
+        lastTarget = res.seekTo;
+        const throttle = v.paused ? SEEK_MS_PAUSED : SEEK_MS_PLAYING;
+        const now = performance.now();
+        if (now - lastSeekAt >= throttle) {
+          try {
+            v.currentTime = res.seekTo;
+          } catch (e) {
+            /* ignore transient seek errors */
+          }
+          lastSeekAt = now;
         }
-        lastSeekAt = now;
+        showOverlay(v, res.fraction, res.seekTo, v.duration);
       }
+    } else {
+      // Released: commit the final precise position (covers throttled-away last
+      // write, important while paused), then hide the overlay.
+      if (wasDragging && lastTarget != null) {
+        try {
+          v.currentTime = lastTarget;
+        } catch (e) {}
+      }
+      wasDragging = false;
+      lastTarget = null;
+      hideOverlaySoon();
     }
   }
 
@@ -141,12 +285,12 @@
   let toastEl = null;
   let toastTimer = 0;
   function toast(text, ms) {
-    if (!toastEl || !toastEl.isConnected) {
+    if (!toastEl) {
       toastEl = document.createElement("div");
       Object.assign(toastEl.style, {
         position: "fixed",
         left: "50%",
-        bottom: "84px",
+        bottom: "12%",
         transform: "translateX(-50%)",
         background: "rgba(20,20,25,0.92)",
         color: "#fff",
@@ -159,8 +303,12 @@
         textAlign: "center",
         boxShadow: "0 4px 16px rgba(0,0,0,.4)",
       });
-      (document.body || document.documentElement).appendChild(toastEl);
     }
+    // Host under the fullscreen element so errors are visible in fullscreen too.
+    const fe = fsElement();
+    const host = fe && fe.tagName !== "VIDEO" ? fe : document.body || document.documentElement;
+    if (toastEl.parentElement !== host) host.appendChild(toastEl);
+    toastEl.style.position = host === document.body || host === document.documentElement ? "fixed" : "absolute";
     toastEl.textContent = text; // textContent is Trusted-Types safe
     toastEl.style.display = "block";
     clearTimeout(toastTimer);
@@ -216,8 +364,6 @@
   }
 
   // --- lifecycle -----------------------------------------------------------
-  // On a video page: ensure the camera iframe exists and a video is targeted.
-  // Off a video page: tear the camera down (no camera prompt on home/feed).
   function sync() {
     if (isVideoPage()) {
       if (getVideo()) ensureIframe();
@@ -227,9 +373,6 @@
     }
   }
 
-  // Debounced MutationObserver: handles videos/iframes that appear or are
-  // swapped after load, without a per-mutation layout storm. Kept alive (never
-  // permanently disconnected) so it re-detects late or replaced players.
   let syncScheduled = false;
   function scheduleSync() {
     if (syncScheduled) return;
@@ -242,12 +385,15 @@
   const mo = new MutationObserver(scheduleSync);
   mo.observe(document.documentElement, { childList: true, subtree: true });
 
-  // Site-agnostic SPA navigation detection. Monkey-patching history from the
-  // isolated world does NOT intercept the page's own pushState, so poll the URL
-  // (cheap) and also honor popstate + YouTube's fast-path event.
+  // Site-agnostic SPA navigation detection (history patching from the isolated
+  // world cannot see the page's pushState, so poll the URL + honor popstate +
+  // YouTube's fast-path event).
   function onNavigate() {
     machine.reset();
     cachedVideo = null;
+    wasDragging = false;
+    lastTarget = null;
+    hideOverlay();
     sync();
   }
   let lastHref = location.href;
@@ -258,7 +404,7 @@
     }
   }, 700);
   window.addEventListener("popstate", onNavigate);
-  window.addEventListener("yt-navigate-finish", onNavigate); // YouTube fast-path
+  window.addEventListener("yt-navigate-finish", onNavigate);
 
   sync();
 })();

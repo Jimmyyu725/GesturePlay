@@ -143,5 +143,14 @@ console.log("gesture-core");
   ok("NaN distance releases DRAGGING", m.state === "IDLE" && r.seekTo === null);
 })();
 
+// 15. Overlay data contract: during DRAGGING, fraction is set and matches seekTo/duration.
+(function () {
+  const m = GC.createMachine({ ema: 1 });
+  m.update({ x: 0.3, d: 0.03, present: true }, { currentTime: 0, duration: 200 }); // anchor
+  const r = m.update({ x: 0.8, d: 0.03, present: true }, { currentTime: 0, duration: 200 });
+  ok("dragging returns finite fraction in [0,1]", GC.isFiniteNum(r.fraction) && r.fraction >= 0 && r.fraction <= 1);
+  ok("fraction matches seekTo/duration", approx(r.fraction, r.seekTo / 200, 1e-9));
+})();
+
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

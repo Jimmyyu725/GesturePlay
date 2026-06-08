@@ -86,20 +86,20 @@ async function main() {
   post({ type: "gs-ready" });
 
   let lastTs = -1;
-  let lastFrameAt = 0;
   let failStreak = 0;
   let detectErrorPosted = false;
 
-  function loop() {
-    requestAnimationFrame(loop);
-
-    const now = performance.now();
-    if (now - lastFrameAt < MIN_FRAME_MS) return; // cap detection rate
-    lastFrameAt = now;
+  // Use a self-scheduling timer (NOT requestAnimationFrame). rAF callbacks are
+  // suspended when this iframe is not being painted — which happens whenever the
+  // host page enters real fullscreen on an element that doesn't contain this
+  // iframe. A timer keeps firing in the foreground tab regardless of paint, and
+  // the live camera MediaStream keeps producing frames, so detection survives
+  // fullscreen without relocating/reloading the iframe.
+  function processFrame() {
     if (video.readyState < 2) return;
 
     // detectForVideo requires strictly increasing timestamps.
-    let ts = now;
+    let ts = performance.now();
     if (ts <= lastTs) ts = lastTs + 1;
     lastTs = ts;
 
@@ -130,7 +130,15 @@ async function main() {
     }
   }
 
-  requestAnimationFrame(loop);
+  function tick() {
+    try {
+      processFrame();
+    } catch (e) {
+      /* never let one bad frame stop the loop */
+    }
+    setTimeout(tick, MIN_FRAME_MS);
+  }
+  tick();
 }
 
 main();

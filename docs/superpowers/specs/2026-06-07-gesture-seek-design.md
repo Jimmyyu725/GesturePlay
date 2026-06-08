@@ -218,3 +218,13 @@ GestureSeek/
 
 **清单(manifest.json)**
 - `web_accessible_resources` 收敛为仅 `camera.html`(其余为扩展同源子资源,无需暴露);移除冗余 `host_permissions`;新增 `storage`(仅用于"首次提示只显示一次")。
+
+---
+
+## 9. v0.3.0:拖动进度条 + 暂停/全屏修复(用户反馈驱动)
+
+用户反馈"拖动时想看到进度条 / 暂停后不好用 / 全屏不好用"。再做一轮 4-agent 聚焦审查(抓出 1 个 blocker),据此修复:
+
+- **拖动进度条浮层**:DRAGGING 时在视频上方浮现进度条 + "当前 / 总时长",松手 0.7s 后消失;`textContent`/`createElement` 构建(Trusted-Types 安全);非全屏按视频矩形定位、抬高避开原生控制条,全屏时挂到全屏元素内用 `bottom%` 定位(规避变换错位)。
+- **全屏修复(根因)**:原因是 camera.js 用 `requestAnimationFrame`,全屏时 iframe 不被绘制 → rAF 暂停 → 检测停。**改用自调度 `setTimeout` 定时器**:前台标签内即使 iframe 不绘制也照常跑,摄像头流持续产帧 → 全屏下检测照常工作。iframe 固定挂 `body`、**不再重挂**(避免重挂导致摄像头重载的 1-3s 死区 blocker)。一举覆盖真全屏 / Bilibili 网页全屏 / 裸 video 全屏。
+- **暂停修复**:暂停时每次 `currentTime` 写入都要解码一帧,20次/秒会卡顿且落后于浮层。改为**按播放状态自适应节流**(播放 50ms / 暂停 140ms),并在**松手时精确落点**一次,保证准确。逻辑上 seek 本就与播放状态无关(暂停时拖动一直有效),卡顿是解码压力,非逻辑 bug。

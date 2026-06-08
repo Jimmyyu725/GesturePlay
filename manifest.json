@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GestureSeek",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "用 USB 摄像头捏合手势,像拖进度条一样实时拖动 YouTube / Bilibili 视频进度。",
   "permissions": ["storage"],
   "icons": {
