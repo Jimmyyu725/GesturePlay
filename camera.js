@@ -4,6 +4,32 @@
 // content script). It makes NO video/business decisions.
 import { HandLandmarker, FilesetResolver } from "./lib/vision_bundle.mjs";
 
+// Silence two known-benign MediaPipe glog WARNINGS that emscripten routes to
+// console.error — they surface in chrome://extensions as "errors" and alarm
+// users, but do not affect hand tracking. Everything else passes through, so
+// real errors stay visible.
+(function () {
+  const NOISE = [
+    "OpenGL error checking is disabled",
+    "NORM_RECT without IMAGE_DIMENSIONS",
+    "gl_context.cc",
+    "landmark_projection_calculator.cc",
+  ];
+  function wrap(orig) {
+    return function () {
+      try {
+        const s = arguments.length ? String(arguments[0]) : "";
+        for (let k = 0; k < NOISE.length; k++) if (s.indexOf(NOISE[k]) >= 0) return;
+      } catch (e) {}
+      return orig.apply(this, arguments);
+    };
+  }
+  if (typeof console !== "undefined") {
+    if (console.error) console.error = wrap(console.error);
+    if (console.warn) console.warn = wrap(console.warn);
+  }
+})();
+
 const TARGET_FPS = 30;
 const MIN_FRAME_MS = 1000 / TARGET_FPS;
 const THUMB_TIP = 4;
