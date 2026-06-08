@@ -35,15 +35,15 @@ console.log("gesture-core");
 
 // 3. Relative anchoring: pinch then hold still -> no jump (stays at anchor)
 (function () {
-  const m = GC.createMachine({ ema: 1 });
+  const m = GC.createMachine({ ema: 1, deadzone: 0 });
   m.update({ x: 0.5, d: 0.03, present: true }, { currentTime: 50, duration: 100 }); // anchor at 0.5
   const r = m.update({ x: 0.5, d: 0.03, present: true }, { currentTime: 50, duration: 100 });
   ok("hold still stays at anchor (no jump)", approx(r.seekTo, 50));
 })();
 
-// 4. Direction: hand moves right (x up) -> seek forward (ema=1 for exact mapping)
+// 4. Direction: hand moves right (x up) -> seek forward (ema=1, deadzone=0 for exact mapping)
 (function () {
-  const m = GC.createMachine({ ema: 1 });
+  const m = GC.createMachine({ ema: 1, deadzone: 0 });
   m.update({ x: 0.2, d: 0.03, present: true }, { currentTime: 0, duration: 100 }); // anchorFraction 0, anchorX 0.2
   const r = m.update({ x: 0.7, d: 0.03, present: true }, { currentTime: 0, duration: 100 });
   ok("move right seeks forward", r.seekTo > 0);
@@ -104,7 +104,7 @@ console.log("gesture-core");
 // 11. REGRESSION: EMA + anchoring must NOT creep with default smoothing on.
 // (Prior IDLE frames at one x, then pinch+hold at a different x with smoothing.)
 (function () {
-  const m = GC.createMachine(); // default ema=0.5 (smoothing ON)
+  const m = GC.createMachine({ deadzone: 0 }); // default ema=0.5 (smoothing ON)
   for (let k = 0; k < 8; k++) m.update({ x: 0.2, d: 0.3, present: true }, { currentTime: 50, duration: 100 });
   // pinch entry at x=0.8
   m.update({ x: 0.8, d: 0.03, present: true }, { currentTime: 50, duration: 100 });
@@ -268,6 +268,26 @@ console.log("gesture-core");
   const v = { currentTime: 0, duration: 100 };
   m.update({ x: 0.5, d: 0.03, present: true }, v); // no ext field
   ok("absent ext => gate skipped, enters DRAGGING", m.state === "DRAGGING");
+})();
+
+// 27. Start deadzone: tiny movement right after pinch does NOT move the bar.
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0.1 });
+  const v = { currentTime: 50, duration: 100 };
+  m.update({ x: 0.5, d: 0.03, present: true, ext: 3 }, v); // enter; anchor 0.5
+  const r1 = m.update({ x: 0.54, d: 0.03, present: true, ext: 3 }, v); // moved 0.04 < 0.1
+  ok("small move within deadzone => no seek", r1.seekTo === null);
+  const r2 = m.update({ x: 0.65, d: 0.03, present: true, ext: 3 }, v); // moved 0.15 >= 0.1
+  ok("move beyond deadzone => seek starts", r2.seekTo !== null);
+})();
+
+// 28. Deadzone activation has no jump and preserves the overshoot (eff = raw - deadzone).
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0.1 });
+  const v = { currentTime: 0, duration: 100 };
+  m.update({ x: 0.2, d: 0.03, present: true, ext: 3 }, v); // anchor 0.2, fraction 0
+  const r = m.update({ x: 0.35, d: 0.03, present: true, ext: 3 }, v); // raw 0.15 -> eff 0.05
+  ok("activation has no jump (eff = raw - deadzone => 5s, not 15s)", approx(r.seekTo, 5, 1e-6));
 })();
 
 console.log("\n" + passed + " passed, " + failed + " failed");

@@ -13,6 +13,7 @@
     ema: 0.5, // x smoothing factor (0..1], higher = more responsive
     holdFrames: 10, // fist must be held this many frames (~0.35s @30fps) to toggle play/pause
     requiredFingers: 3, // middle/ring/pinky that must be extended to START a scrub (anti-false-trigger)
+    deadzone: 0.05, // hand must move this far (normalized x) after pinching before the bar starts moving
   };
 
   function isFiniteNum(v) {
@@ -43,6 +44,7 @@
     let anchorFraction = 0;
     let fistFrames = 0; // consecutive frames the fist has been held (while not dragging)
     let toggleArmed = true; // edge gate: must see a non-fist frame before toggling again
+    let dragActive = false; // DRAGGING but movement hasn't passed the start deadzone yet
 
     function reset() {
       state = "IDLE";
@@ -51,6 +53,7 @@
       anchorFraction = 0;
       fistFrames = 0;
       toggleArmed = true;
+      dragActive = false;
     }
 
     function update(frame, video) {
@@ -83,6 +86,7 @@
       if (state === "IDLE") {
         if (!fist && fingersOk && isFiniteNum(d) && d < o.pinchOn && ready) {
           state = "DRAGGING";
+          dragActive = false; // wait for movement to pass the deadzone before scrubbing
           // Snap the smoother to the raw x at entry so a still hand => still video.
           xSmooth = frame.x;
           anchorX = frame.x;
@@ -92,9 +96,23 @@
         // DRAGGING — release on a non-pinch (or NaN d), or if a fist is detected.
         if (fist || !(isFiniteNum(d) && d <= o.pinchOff)) {
           state = "IDLE";
+          dragActive = false;
         } else if (ready) {
-          fraction = clamp01(anchorFraction + (xSmooth - anchorX));
-          seekTo = fraction * video.duration;
+          // Start deadzone: ignore tiny movement right after pinching; only once
+          // the hand has moved >= deadzone does the bar start moving. Fold the
+          // deadzone into the anchor on activation so there's no jump and the
+          // movement beyond the deadzone is preserved.
+          if (!dragActive) {
+            const raw = xSmooth - anchorX;
+            if (Math.abs(raw) >= o.deadzone) {
+              dragActive = true;
+              anchorX += (raw > 0 ? o.deadzone : -o.deadzone);
+            }
+          }
+          if (dragActive) {
+            fraction = clamp01(anchorFraction + (xSmooth - anchorX));
+            seekTo = fraction * video.duration;
+          }
         }
       }
 

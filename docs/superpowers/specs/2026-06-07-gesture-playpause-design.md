@@ -116,6 +116,15 @@ canToggle:一个布尔"闸门",握拳触发后置 false,必须经历一帧 !fist
 - 向后兼容:`frame.ext` 缺省时跳过该门槛(旧测试不受影响)。
 - 测试:`ext>=3` 进入;`ext∈{0,1,2}` 不进入;入口后 `ext` 掉到 0 仍继续拖;缺省 ext 仍可进入。
 
+## 10c. v0.5.2:起步死区(刚捏合不动,手移动够大才拖)
+
+用户反馈:刚捏合时进度条会因微小晃动而抖动。增加**起步激活死区**:
+
+- 进入 DRAGGING 后先 `dragActive=false`,不出 `seekTo`;当 `|xSmooth − anchorX| ≥ deadzone`(默认 0.05 归一化宽度)才 `dragActive=true` 开始拖。
+- 激活时把 deadzone **折进锚点**(`anchorX += ±deadzone`):激活瞬间不跳变,且死区之外的位移完整保留(eff = raw − deadzone)。
+- **仅起步检查**:激活后正常 1:1 跟随(死区不再生效),手回拉也不会因再次进死区而抖。
+- 释放/reset 清 `dragActive`。`deadzone:0` 关闭(测试用)。
+
 ## 11. 不做(YAGNI)
 
 - 不用 `Open_Palm` 做任何动作(握拳已能双向切换)。
