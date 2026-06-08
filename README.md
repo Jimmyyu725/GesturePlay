@@ -13,13 +13,21 @@ While dragging, the site's **own native progress bar** moves (GestureSeek draws 
 
 ## Install (load unpacked)
 
+First get the files: clone or download this repository to any folder.
+
+```bash
+git clone <this-repo-url> GestureSeek
+```
+
+Then:
+
 1. Open Chrome and go to `chrome://extensions`.
 2. Turn on **Developer mode** (top-right).
 3. Click **Load unpacked**.
-4. Select the folder **`C:\Project\GestureSeek`** (the one that contains `manifest.json`).
+4. Select the project folder — the one that contains `manifest.json` (wherever you cloned/downloaded it).
 5. **GestureSeek** appears in the list — installed.
 
-> Chromium-based browsers only (Chrome / Edge). Manifest V3.
+> Works on any Chromium-based browser (Chrome / Edge), on Windows, macOS, and Linux. Manifest V3. On macOS, also allow Chrome to use the camera under System Settings → Privacy & Security → Camera.
 
 ## First run
 
