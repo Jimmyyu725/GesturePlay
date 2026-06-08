@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 280px;
+        margin: 0;
+        padding: 14px 16px;
+        font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif;
+        color: #1d1d22;
+        background: linear-gradient(135deg, #7c3aed10, #2563eb10);
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+      }
+      ol {
+        margin: 8px 0 10px;
+        padding-left: 18px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      .k {
+        background: #00000010;
+        border-radius: 4px;
+        padding: 0 5px;
+        font-family: ui-monospace, monospace;
+      }
+      .note {
+        color: #555;
+        font-size: 12px;
+        margin-top: 10px;
+        border-top: 1px solid #00000015;
+        padding-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1><span class="dot"></span>GestureSeek</h1>
+    <div>在 YouTube / Bilibili 视频页:</div>
+    <ol>
+      <li>把手伸到摄像头前。</li>
+      <li><b>捏合</b>拇指与食指 = 抓住进度条。</li>
+      <li>捏住后<b>左右移动手</b> = 实时拖动进度。</li>
+      <li><b>松开</b>手指 = 放下,停在当前位置。</li>
+    </ol>
+    <div>手往<b>右</b> = 视频<b>前进</b>;满屏宽度 = 整条视频。</div>
+    <div class="note">
+      首次使用会请求摄像头权限,点"允许"即可(只问一次,两站通用)。所有画面在本地处理,绝不上传。
+    </div>
+  </body>
+</html>

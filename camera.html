@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GestureSeek camera</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+      /* The webcam feed is never shown to the user; only used as MediaPipe input. */
+      #cam {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        opacity: 0.01;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="cam" autoplay playsinline muted></video>
+    <script type="module" src="camera.js"></script>
+  </body>
+</html>
