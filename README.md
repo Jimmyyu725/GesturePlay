@@ -48,6 +48,7 @@ Start deadzone: small wobble right after pinching does **not** move the bar; scr
 
 Click the GestureSeek toolbar icon to open the popup. All sliders apply **live**:
 
+- **Language** — Auto (follow the browser), 中文, or English; switches both the popup and the in-page messages.
 - **Start deadzone** — how far the hand must move before scrubbing begins (higher = steadier).
 - **Fist hold time** — how long a fist must be held to toggle play/pause.
 - **Fingers required to scrub** — 3 (fewest false triggers), 2 (easier to pose), or 1 (loosest).

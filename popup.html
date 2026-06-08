@@ -10,7 +10,7 @@
         width: 300px;
         margin: 0;
         padding: 14px 16px 16px;
-        font: 13px/1.5 system-ui, sans-serif;
+        font: 13px/1.5 system-ui, "Microsoft YaHei", sans-serif;
         color: #1d1d22;
         background: linear-gradient(135deg, #7c3aed10, #2563eb10);
       }
@@ -32,9 +32,6 @@
         color: #333;
         margin: 0 0 12px;
         line-height: 1.6;
-      }
-      .gestures b {
-        color: #111;
       }
       .sec {
         font-size: 12px;
@@ -60,6 +57,14 @@
       input[type="range"] {
         width: 100%;
         accent-color: #7c3aed;
+      }
+      select#lang {
+        width: 100%;
+        padding: 5px;
+        border-radius: 8px;
+        border: 1px solid #00000022;
+        background: #fff;
+        font: inherit;
       }
       .toggle {
         display: flex;
@@ -97,45 +102,55 @@
     <h1><span class="dot"></span>GestureSeek</h1>
 
     <div class="gestures">
-      <b>Pinch + middle/ring/pinky up</b> → scrub; move right = forward.<br />
-      <b>✊ Hold a fist</b> → toggle play / pause.
+      <span data-i18n="summary1"></span><br />
+      <span data-i18n="summary2"></span>
     </div>
 
-    <div class="sec">Sensitivity (applies live)</div>
+    <div class="sec" data-i18n="secLanguage">Language</div>
+    <div class="row">
+      <select id="lang">
+        <option value="auto" data-i18n="langAuto">Auto (follow browser)</option>
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <div class="sec" data-i18n="secSensitivity">Sensitivity (applies live)</div>
 
     <div class="row">
-      <div class="lab"><span>Start deadzone (move before scrubbing)</span><span class="val" id="vDead">0.05</span></div>
+      <div class="lab"><span data-i18n="labDeadzone"></span><span class="val" id="vDead">0.05</span></div>
       <input type="range" id="deadzone" min="0" max="0.15" step="0.01" />
-      <div class="hint">Higher = steadier (less jitter); lower = more sensitive.</div>
+      <div class="hint" data-i18n="hintDeadzone"></div>
     </div>
 
     <div class="row">
-      <div class="lab"><span>Fist hold time (seconds)</span><span class="val" id="vHold">0.35</span></div>
+      <div class="lab"><span data-i18n="labHold"></span><span class="val" id="vHold">0.35</span></div>
       <input type="range" id="hold" min="0.1" max="1.0" step="0.05" />
-      <div class="hint">How long to hold a fist before it toggles play/pause.</div>
+      <div class="hint" data-i18n="hintHold"></div>
     </div>
 
     <div class="row">
-      <div class="lab"><span>Fingers required to scrub</span><span class="val" id="vFingers">3</span></div>
+      <div class="lab"><span data-i18n="labFingers"></span><span class="val" id="vFingers">3</span></div>
       <input type="range" id="fingers" min="1" max="3" step="1" />
-      <div class="hint">3 = fewest false triggers; 2 = easier to pose; 1 = loosest.</div>
+      <div class="hint" data-i18n="hintFingers"></div>
     </div>
 
     <div class="row">
-      <div class="lab"><span>Pinch sensitivity (smaller = pinch tighter)</span><span class="val" id="vPinch">0.05</span></div>
+      <div class="lab"><span data-i18n="labPinch"></span><span class="val" id="vPinch">0.05</span></div>
       <input type="range" id="pinch" min="0.03" max="0.1" step="0.005" />
-      <div class="hint">Thumb-to-index distance below this counts as a pinch.</div>
+      <div class="hint" data-i18n="hintPinch"></div>
     </div>
 
-    <div class="sec">Debug</div>
+    <div class="sec" data-i18n="secDebug">Debug</div>
     <div class="toggle">
-      <span>Show camera preview + hand skeleton</span>
+      <span data-i18n="labPreview"></span>
       <input type="checkbox" id="preview" />
     </div>
-    <div class="hint">Shows a small corner window of the detected hand; turn it off once tuned.</div>
+    <div class="hint" data-i18n="hintPreview"></div>
 
-    <button class="reset" id="reset">Reset to defaults</button>
+    <button class="reset" id="reset" data-i18n="reset">Reset to defaults</button>
 
+    <script src="i18n.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -16,6 +16,12 @@
     return;
   }
 
+  const I18N = globalThis.GSI18N;
+  let lang = I18N ? I18N.resolve("auto") : "en"; // updated from the gsLang setting
+  function tr(key) {
+    return I18N ? I18N.t(lang, key) : key;
+  }
+
   let machine = GC.createMachine(); // recreated when settings change
   const SEEK_MS_PLAYING = 50; // <=20/sec: smooth scrub while playing
   const SEEK_MS_PAUSED = 140; // ~7/sec: paused video must decode each seek; don't flood it
@@ -38,7 +44,7 @@
   let previewOn = false; // debug camera/skeleton preview (popup setting)
 
   // --- settings (popup -> chrome.storage -> here) --------------------------
-  const SETTINGS_DEFAULTS = { gsDeadzone: 0.05, gsHold: 0.35, gsFingers: 3, gsPinch: 0.05, gsPreview: false };
+  const SETTINGS_DEFAULTS = { gsDeadzone: 0.05, gsHold: 0.35, gsFingers: 3, gsPinch: 0.05, gsPreview: false, gsLang: "auto" };
 
   // Rebuild the gesture machine from the tuning settings. Only call this when a
   // gesture-affecting key actually changed — recreating the machine resets any
@@ -59,6 +65,11 @@
     previewOn = !!s.gsPreview;
     sizeIframe();
     postPreview();
+  }
+
+  // Language for the in-page toasts (auto | zh | en).
+  function applyLang(s) {
+    lang = I18N ? I18N.resolve(s.gsLang) : "en";
   }
 
   function loadSettings(cb) {
@@ -317,7 +328,7 @@
     try {
       chrome.storage.local.get("gsHintShown", function (r) {
         if (!r || !r.gsHintShown) {
-          toast("GestureSeek: about to request camera access — click Allow (asked once; video is processed locally and never uploaded)", 9000);
+          toast(tr("hint"), 9000);
           try {
             chrome.storage.local.set({ gsHintShown: true });
           } catch (e) {}
@@ -346,15 +357,15 @@
 
   function handleError(m) {
     if (m.indexOf("camera-denied") === 0) {
-      toast("GestureSeek: camera blocked. Click the camera icon on the left of the address bar, set it to Allow, then reload the page.", 12000);
+      toast(tr("cameraDenied"), 12000);
     } else if (m.indexOf("camera-lost") === 0) {
-      toast("GestureSeek: camera disconnected. Reconnect it, then reload the page.", 12000);
+      toast(tr("cameraLost"), 12000);
     } else if (m.indexOf("model-load-failed") === 0) {
-      toast("GestureSeek: failed to load the hand model. Reload the page to try again.", 12000);
+      toast(tr("modelFail"), 12000);
     } else if (m.indexOf("detect-failed") === 0) {
-      toast("GestureSeek: hand detection error. Reload the page to try again.", 12000);
+      toast(tr("detectFail"), 12000);
     } else {
-      toast("GestureSeek: initialization failed — " + m, 10000);
+      toast(tr("initFail") + m, 10000);
     }
   }
 
@@ -404,6 +415,7 @@
   loadSettings(function (s) {
     applyMachine(s);
     applyPreview(s);
+    applyLang(s);
   });
   try {
     chrome.storage.onChanged.addListener(function (changes, area) {
@@ -415,6 +427,9 @@
       }
       if (changes.gsPreview) {
         loadSettings(applyPreview);
+      }
+      if (changes.gsLang) {
+        loadSettings(applyLang);
       }
     });
   } catch (e) {
