@@ -235,5 +235,40 @@ console.log("gesture-core");
   ok("sustained fist after drag release toggles", t.togglePlay === true);
 })();
 
+// 23. Pinch with all 3 side fingers extended STARTS a scrub.
+(function () {
+  const m = GC.createMachine({ ema: 1 });
+  const v = { currentTime: 0, duration: 100 };
+  m.update({ x: 0.5, d: 0.03, present: true, ext: 3 }, v);
+  ok("pinch + 3 fingers up enters DRAGGING", m.state === "DRAGGING");
+})();
+
+// 24. Pinch with too few fingers up does NOT start a scrub (anti false-trigger).
+(function () {
+  for (const e of [0, 1, 2]) {
+    const m = GC.createMachine({ ema: 1 });
+    const v = { currentTime: 0, duration: 100 };
+    const r = m.update({ x: 0.5, d: 0.03, present: true, ext: e }, v);
+    ok("pinch with ext=" + e + " does NOT scrub", m.state === "IDLE" && r.seekTo === null);
+  }
+})();
+
+// 25. Finger gate is ENTRY-ONLY: a wobble (ext drops) mid-drag does not release.
+(function () {
+  const m = GC.createMachine({ ema: 1 });
+  const v = { currentTime: 0, duration: 100 };
+  m.update({ x: 0.3, d: 0.03, present: true, ext: 3 }, v); // enter
+  const r = m.update({ x: 0.8, d: 0.03, present: true, ext: 0 }, v); // fingers dropped but still pinched
+  ok("ext drop mid-drag keeps DRAGGING", m.state === "DRAGGING" && r.seekTo > 0);
+})();
+
+// 26. Backward-compat: when ext is absent, the pose gate is skipped (still scrubs).
+(function () {
+  const m = GC.createMachine({ ema: 1 });
+  const v = { currentTime: 0, duration: 100 };
+  m.update({ x: 0.5, d: 0.03, present: true }, v); // no ext field
+  ok("absent ext => gate skipped, enters DRAGGING", m.state === "DRAGGING");
+})();
+
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

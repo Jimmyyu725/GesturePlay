@@ -12,6 +12,7 @@
     pinchOff: 0.07, // leave DRAGGING when distance > this (hysteresis)
     ema: 0.5, // x smoothing factor (0..1], higher = more responsive
     holdFrames: 10, // fist must be held this many frames (~0.35s @30fps) to toggle play/pause
+    requiredFingers: 3, // middle/ring/pinky that must be extended to START a scrub (anti-false-trigger)
   };
 
   function isFiniteNum(v) {
@@ -73,9 +74,14 @@
       let seekTo = null;
       let fraction = null;
 
-      // --- pinch / scrub state machine (entry gated on !fist: fist != pinch) ---
+      // --- pinch / scrub state machine ---
+      // Entry requires: not a fist, a close pinch, a seekable video, AND a
+      // deliberate pose — middle/ring/pinky extended (>= requiredFingers). The
+      // finger check is ENTRY-ONLY: once dragging, a finger wobble won't drop it.
+      // If frame.ext is absent (e.g. older callers/tests), the pose gate is skipped.
+      const fingersOk = typeof frame.ext !== "number" || frame.ext >= o.requiredFingers;
       if (state === "IDLE") {
-        if (!fist && isFiniteNum(d) && d < o.pinchOn && ready) {
+        if (!fist && fingersOk && isFiniteNum(d) && d < o.pinchOn && ready) {
           state = "DRAGGING";
           // Snap the smoother to the raw x at entry so a still hand => still video.
           xSmooth = frame.x;

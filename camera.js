@@ -62,6 +62,9 @@ const TARGET_FPS = 30;
 const MIN_FRAME_MS = 1000 / TARGET_FPS;
 const THUMB_TIP = 4;
 const INDEX_TIP = 8;
+const WRIST = 0;
+// [tip, pip] landmark pairs for middle / ring / pinky (used to tell extended vs curled)
+const SIDE_FINGERS = [[12, 10], [16, 14], [20, 18]];
 const DETECT_FAIL_LIMIT = 60; // ~2s of consecutive inference errors before warning
 
 function post(msg) {
@@ -109,6 +112,23 @@ function readResult(res) {
     fist = res.gestures[0][0].categoryName === "Closed_Fist";
   }
   return { landmarks: lms, fist: fist };
+}
+
+// How many of {middle, ring, pinky} are extended: a finger is extended when its
+// tip is farther from the wrist than its PIP joint. Used to require a deliberate
+// "pinch with the other three fingers up" pose before scrubbing (cuts false hits).
+function dist2(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+function countExtendedSideFingers(lm) {
+  const w = lm[WRIST];
+  let n = 0;
+  for (let k = 0; k < SIDE_FINGERS.length; k++) {
+    const tip = lm[SIDE_FINGERS[k][0]];
+    const pip = lm[SIDE_FINGERS[k][1]];
+    if (dist2(tip, w) > dist2(pip, w)) n++;
+  }
+  return n;
 }
 
 async function main() {
@@ -190,9 +210,10 @@ async function main() {
       const x = 1 - cx; // mirror: hand to user's right => later in video
       const dz = (t.z || 0) - (i.z || 0);
       const d = Math.sqrt((t.x - i.x) ** 2 + (t.y - i.y) ** 2 + dz ** 2);
-      post({ type: "gs-frame", x: x, d: d, present: true, fist: parsed.fist });
+      const ext = countExtendedSideFingers(lm);
+      post({ type: "gs-frame", x: x, d: d, present: true, fist: parsed.fist, ext: ext });
     } else {
-      post({ type: "gs-frame", x: 0, d: 1, present: false, fist: false });
+      post({ type: "gs-frame", x: 0, d: 1, present: false, fist: false, ext: 0 });
     }
   }
 
