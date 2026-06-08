@@ -24,10 +24,30 @@ import { HandLandmarker, FilesetResolver } from "./lib/vision_bundle.mjs";
       return orig.apply(this, arguments);
     };
   }
+  function isNoise(msg) {
+    try {
+      const s = String(msg);
+      for (let k = 0; k < NOISE.length; k++) if (s.indexOf(NOISE[k]) >= 0) return true;
+    } catch (e) {}
+    return false;
+  }
   if (typeof console !== "undefined") {
     if (console.error) console.error = wrap(console.error);
     if (console.warn) console.warn = wrap(console.warn);
   }
+  // Belt-and-suspenders: emscripten's logger checks a global `dbg` first
+  // (if (typeof dbg !== "undefined") dbg(...)) before falling back to
+  // console.warn. Define a filtering `dbg` so the noise is dropped at the source.
+  try {
+    if (typeof window !== "undefined" && typeof window.dbg === "undefined") {
+      window.dbg = function (msg) {
+        if (isNoise(msg)) return;
+        try {
+          console.warn(msg);
+        } catch (e) {}
+      };
+    }
+  } catch (e) {}
 })();
 
 const TARGET_FPS = 30;
