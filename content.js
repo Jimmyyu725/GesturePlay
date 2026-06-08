@@ -163,6 +163,21 @@
     if (!v) return;
     const res = machine.update(frame, { currentTime: v.currentTime, duration: v.duration });
 
+    // Fist held -> toggle play/pause (native UI shows the play/pause animation).
+    if (res.togglePlay) {
+      try {
+        if (v.paused) {
+          const p = v.play();
+          if (p && p.catch) p.catch(function () {});
+        } else {
+          v.pause();
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      nudgeControls(v);
+    }
+
     if (res.state === "DRAGGING") {
       wasDragging = true;
       if (res.fraction != null && res.seekTo != null && GC.isFiniteNum(res.seekTo)) {

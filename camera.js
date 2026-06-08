@@ -2,7 +2,7 @@
 // Pure "gesture sensor": opens the webcam, runs MediaPipe HandLandmarker, and
 // posts one lightweight {x, d, present} message per frame to the parent (the
 // content script). It makes NO video/business decisions.
-import { HandLandmarker, FilesetResolver } from "./lib/vision_bundle.mjs";
+import { HandLandmarker, GestureRecognizer, FilesetResolver } from "./lib/vision_bundle.mjs";
 
 // Silence two known-benign MediaPipe glog WARNINGS that emscripten routes to
 // console.error — they surface in chrome://extensions as "errors" and alarm
@@ -50,6 +50,14 @@ import { HandLandmarker, FilesetResolver } from "./lib/vision_bundle.mjs";
   } catch (e) {}
 })();
 
+// Detection engine:
+//   "gesture"    = MediaPipe GestureRecognizer (gesture_recognizer.task) — gives
+//                  21 landmarks (for pinch) PLUS a trained gesture label so a fist
+//                  is recognized reliably as "Closed_Fist". (default)
+//   "landmarker" = MediaPipe HandLandmarker (hand_landmarker.task) — landmarks
+//                  only; pinch works, no fist. Retained as a fallback; flip here.
+const ENGINE = "gesture";
+
 const TARGET_FPS = 30;
 const MIN_FRAME_MS = 1000 / TARGET_FPS;
 const THUMB_TIP = 4;
@@ -71,25 +79,36 @@ async function openCamera() {
   });
 }
 
-async function createLandmarker() {
+async function createDetector() {
   const fileset = await FilesetResolver.forVisionTasks(chrome.runtime.getURL("lib/wasm"));
-  const baseOptions = {
-    modelAssetPath: chrome.runtime.getURL("models/hand_landmarker.task"),
-  };
-  // Prefer GPU; fall back to CPU if the GPU delegate fails to initialise.
-  try {
-    return await HandLandmarker.createFromOptions(fileset, {
-      baseOptions: Object.assign({ delegate: "GPU" }, baseOptions),
-      runningMode: "VIDEO",
-      numHands: 1,
-    });
-  } catch (gpuErr) {
-    return await HandLandmarker.createFromOptions(fileset, {
-      baseOptions: Object.assign({ delegate: "CPU" }, baseOptions),
+  const isGesture = ENGINE === "gesture";
+  const Cls = isGesture ? GestureRecognizer : HandLandmarker;
+  const modelPath = chrome.runtime.getURL(
+    isGesture ? "models/gesture_recognizer.task" : "models/hand_landmarker.task"
+  );
+  function make(delegate) {
+    return Cls.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: modelPath, delegate: delegate },
       runningMode: "VIDEO",
       numHands: 1,
     });
   }
+  // Prefer GPU; fall back to CPU if the GPU delegate fails to initialise.
+  try {
+    return await make("GPU");
+  } catch (gpuErr) {
+    return await make("CPU");
+  }
+}
+
+// Pull {landmarks, fist} out of a per-frame result for either engine.
+function readResult(res) {
+  const lms = res && res.landmarks && res.landmarks.length > 0 ? res.landmarks[0] : null;
+  let fist = false;
+  if (ENGINE === "gesture" && res && res.gestures && res.gestures.length > 0 && res.gestures[0].length > 0) {
+    fist = res.gestures[0][0].categoryName === "Closed_Fist";
+  }
+  return { landmarks: lms, fist: fist };
 }
 
 async function main() {
@@ -121,9 +140,9 @@ async function main() {
     /* autoplay of a muted local stream is allowed; ignore */
   }
 
-  let landmarker;
+  let detector;
   try {
-    landmarker = await createLandmarker();
+    detector = await createDetector();
   } catch (e) {
     post({ type: "gs-error", message: "model-load-failed:" + (e && e.message ? e.message : "unknown") });
     return;
@@ -151,7 +170,7 @@ async function main() {
 
     let res = null;
     try {
-      res = landmarker.detectForVideo(video, ts);
+      res = ENGINE === "gesture" ? detector.recognizeForVideo(video, ts) : detector.detectForVideo(video, ts);
       failStreak = 0;
     } catch (e) {
       failStreak++;
@@ -162,17 +181,18 @@ async function main() {
       return;
     }
 
-    if (res && res.landmarks && res.landmarks.length > 0) {
-      const lm = res.landmarks[0];
+    const parsed = readResult(res);
+    if (parsed.landmarks) {
+      const lm = parsed.landmarks;
       const t = lm[THUMB_TIP];
       const i = lm[INDEX_TIP];
       const cx = (t.x + i.x) / 2;
       const x = 1 - cx; // mirror: hand to user's right => later in video
       const dz = (t.z || 0) - (i.z || 0);
       const d = Math.sqrt((t.x - i.x) ** 2 + (t.y - i.y) ** 2 + dz ** 2);
-      post({ type: "gs-frame", x: x, d: d, present: true });
+      post({ type: "gs-frame", x: x, d: d, present: true, fist: parsed.fist });
     } else {
-      post({ type: "gs-frame", x: 0, d: 1, present: false });
+      post({ type: "gs-frame", x: 0, d: 1, present: false, fist: false });
     }
   }
 
