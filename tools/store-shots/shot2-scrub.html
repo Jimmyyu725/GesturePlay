@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!-- Store screenshot 2 (1280x800): scrubbing demo on a stylized player.
+     Render: chrome --headless=new --window-size=1280,800 --screenshot=... this file -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 800px; overflow: hidden; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(1100px 650px at 75% 0%, #1b2a55, #0d0d18 60%), #0d0d18;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        margin-top: 40px;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+      }
+      h1 .grad {
+        background: linear-gradient(135deg, #a78bfa, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .player {
+        position: relative;
+        margin-top: 34px;
+        width: 980px;
+        height: 470px;
+        border-radius: 22px;
+        background:
+          radial-gradient(700px 320px at 30% 20%, rgba(124, 58, 237, 0.35), transparent 70%),
+          radial-gradient(600px 300px at 80% 70%, rgba(37, 99, 235, 0.3), transparent 70%),
+          #15151f;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+      .hand {
+        position: absolute;
+        left: 50%;
+        top: 52px;
+        transform: translateX(-50%);
+        width: 240px;
+        height: 240px;
+      }
+      .harrow {
+        position: absolute;
+        top: 150px;
+        font-size: 64px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #a78bfa, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .harrow.l { left: 256px; }
+      .harrow.r { right: 256px; }
+      .guide {
+        position: absolute;
+        left: 120px;
+        right: 120px;
+        top: 186px;
+        border-top: 3px dashed rgba(167, 139, 250, 0.5);
+      }
+      .caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 318px;
+        text-align: center;
+        font-size: 25px;
+        font-weight: 700;
+        color: #e9e6ff;
+      }
+      .caption small {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 400;
+        color: #b6b0d8;
+      }
+      .controls {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 64px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+        display: flex;
+        align-items: center;
+        padding: 0 28px;
+        gap: 18px;
+      }
+      .play {
+        width: 0;
+        height: 0;
+        border-left: 18px solid #fff;
+        border-top: 11px solid transparent;
+        border-bottom: 11px solid transparent;
+      }
+      .bar {
+        position: relative;
+        flex: 1;
+        height: 7px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 38%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #7c3aed, #2563eb);
+      }
+      .knob {
+        position: absolute;
+        left: 38%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 12px rgba(167, 139, 250, 0.9);
+      }
+      .time { font-size: 17px; color: #ddd; font-variant-numeric: tabular-nums; }
+      .chips {
+        display: flex;
+        gap: 16px;
+        margin-top: 30px;
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 12px 22px;
+        font-size: 18.5px;
+        color: #ddd9f5;
+      }
+      .chip b { color: #fff; }
+      .tick {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pinch and slide — <span class="grad">the real progress bar follows</span></h1>
+
+    <div class="player">
+      <span class="harrow l">⟵</span>
+      <img class="hand" src="../../assets/store/gesture-pinch.png" alt="" />
+      <span class="harrow r">⟶</span>
+      <div class="guide"></div>
+      <div class="caption">
+        One full hand sweep = 1 minute
+        <small>adjustable: 30 s · 1 min · 2 min · 5 min · whole video</small>
+      </div>
+      <div class="controls">
+        <div class="play"></div>
+        <div class="bar"><div class="fill"></div><div class="knob"></div></div>
+        <div class="time">18:22 / 48:05</div>
+      </div>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><span class="tick">✓</span><span>Works <b>paused</b> &amp; in <b>fullscreen</b></span></div>
+      <div class="chip"><span class="tick">✓</span><span><b>Fist</b> = play / pause</span></div>
+      <div class="chip"><span class="tick">✓</span><span>Live-tunable settings, <b>EN / 中文</b></span></div>
+      <div class="chip"><span class="tick">✓</span><span><b>Zero</b> network requests</span></div>
+    </div>
+  </body>
+</html>

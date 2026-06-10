@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!-- Store screenshot 1 (1280x800): the at-a-glance gesture guide.
+     Render: chrome --headless=new --window-size=1280,800 --screenshot=... this file -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 800px; overflow: hidden; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(1200px 700px at 25% 0%, #221643, #0d0d18 60%), #0d0d18;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 44px;
+      }
+      .dot {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        position: relative;
+      }
+      .dot::before, .dot::after {
+        content: "";
+        position: absolute;
+        top: 17px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fff;
+      }
+      .dot::before { left: 9px; }
+      .dot::after { right: 9px; }
+      h1 { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; }
+      .tag {
+        font-size: 21px;
+        color: #b9b3d9;
+        margin-top: 10px;
+      }
+      .cards {
+        display: flex;
+        gap: 28px;
+        margin-top: 42px;
+      }
+      .card {
+        width: 376px;
+        height: 460px;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 26px;
+      }
+      .imgwrap {
+        position: relative;
+        width: 280px;
+        height: 280px;
+      }
+      .imgwrap img { width: 280px; height: 280px; }
+      .arrow {
+        position: absolute;
+        top: 118px;
+        font-size: 58px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #a78bfa, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .arrow.l { left: -36px; }
+      .arrow.r { right: -36px; }
+      .step {
+        margin-top: 4px;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 2.5px;
+        color: #8f86c0;
+      }
+      .label {
+        margin-top: 8px;
+        font-size: 27px;
+        font-weight: 800;
+        text-align: center;
+        line-height: 1.25;
+      }
+      .sub {
+        margin-top: 8px;
+        font-size: 19px;
+        color: #c6c0e4;
+        text-align: center;
+        line-height: 1.4;
+        padding: 0 24px;
+      }
+      footer {
+        margin-top: 40px;
+        font-size: 19px;
+        color: #a59ecf;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+      }
+      footer b { color: #e8e5ff; }
+      .sep { opacity: 0.5; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="dot"></div>
+      <h1>GestureSeek</h1>
+    </header>
+    <div class="tag">Control video playback with your hand — through your webcam</div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="imgwrap">
+          <span class="arrow l">⟵</span>
+          <img src="../../assets/store/gesture-pinch.png" alt="" />
+          <span class="arrow r">⟶</span>
+        </div>
+        <div class="step">SEEK</div>
+        <div class="label">Pinch + 3 fingers up</div>
+        <div class="sub">Move your hand left or right —<br />the progress bar follows live</div>
+      </div>
+      <div class="card">
+        <div class="imgwrap"><img src="../../assets/store/gesture-fist.png" alt="" /></div>
+        <div class="step">PLAY / PAUSE</div>
+        <div class="label">Hold a fist</div>
+        <div class="sub">About half a second —<br />fist again to toggle back</div>
+      </div>
+      <div class="card">
+        <div class="imgwrap"><img src="../../assets/store/gesture-palm.png" alt="" /></div>
+        <div class="step">REST</div>
+        <div class="label">Open palm</div>
+        <div class="sub">Does nothing —<br />relax between gestures</div>
+      </div>
+    </div>
+
+    <footer>
+      <span>Works on <b>YouTube</b> &amp; <b>Bilibili</b></span>
+      <span class="sep">·</span>
+      <span><b>100% on-device</b> AI</span>
+      <span class="sep">·</span>
+      <span>No data ever leaves your computer</span>
+    </footer>
+  </body>
+</html>

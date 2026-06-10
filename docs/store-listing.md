@@ -91,13 +91,14 @@ Primary: English. Optionally add a zh-CN localized description (above).
 ## Assets checklist
 
 - [x] Icon 128×128 — already in the package (`icons/icon128.png`).
-- [ ] At least 1 screenshot, 1280×800 (or 640×400). Suggested shots:
-  1. A YouTube video page with the settings popup open.
-  2. The camera preview window showing the hand skeleton while pinching
-     (enable "Show camera preview + hand skeleton" in settings).
-  3. (Optional) Bilibili page mid-scrub showing the native progress bar moving.
-  How: set the browser window to 1280×800 (or crop after), press
-  Win+Shift+S to capture.
+- [x] Screenshots (1280×800), ready to upload:
+  - `assets/store/screenshot-1-gestures.png` — the at-a-glance gesture guide.
+  - `assets/store/screenshot-2-scrub.png` — the scrubbing demo + feature chips.
+  - Regenerate any time: gesture art via `tools/gen-gesture-art.mjs` (OpenAI
+    Images API), then render `tools/store-shots/*.html` at 1280×800 with
+    headless Chrome/Edge (`--headless=new --window-size=1280,800 --screenshot=...`).
+  - (Optional extra) A real-usage capture: open a YouTube video, enable
+    "Show camera preview + hand skeleton" in settings, pinch, Win+Shift+S.
 - [ ] (Optional) Small promo tile 440×280 — can be skipped; the store will
   still accept the listing without marketing images in most cases.
 

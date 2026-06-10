@@ -2,6 +2,8 @@
 
 Control YouTube and Bilibili with **webcam hand gestures**: **pinch and drag to scrub** the progress bar, **make a fist to play/pause**.
 
+![How it works](assets/store/screenshot-1-gestures.png)
+
 - **Pinch** thumb + index together **with your middle, ring and pinky raised** = grab the progress bar → move your hand left/right to scrub → release to drop it. Hand to the right = forward; sweeping the full camera width = the whole video. (The three raised fingers are required so everyday hand poses don't trigger it by accident.)
 - ✊ **Hold a fist for about half a second** = toggle play/pause (fist again to toggle back). An open palm is the resting pose and does nothing.
 
