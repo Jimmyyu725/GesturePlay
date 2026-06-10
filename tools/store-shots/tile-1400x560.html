@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!-- Marquee promo tile (1400x560) for the Chrome Web Store listing.
+     Render: chrome --headless=new --window-size=1400,560 --screenshot=... this file -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1400px; height: 560px; overflow: hidden; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(1200px 600px at 18% 0%, #251a4a, #0d0d18 62%), #0d0d18;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 60px 0 70px;
+        gap: 30px;
+      }
+      .left { width: 470px; }
+      .brand { display: flex; align-items: center; gap: 16px; }
+      .dot {
+        width: 46px; height: 46px; border-radius: 13px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        position: relative;
+      }
+      .dot::before, .dot::after {
+        content: ""; position: absolute; top: 18px; width: 10px; height: 10px;
+        border-radius: 50%; background: #fff;
+      }
+      .dot::before { left: 9px; }
+      .dot::after { right: 9px; }
+      h1 { font-size: 52px; font-weight: 800; letter-spacing: -0.6px; }
+      .tag { margin-top: 16px; font-size: 24px; line-height: 1.45; color: #cdc7ea; }
+      .tag b { color: #fff; }
+      .priv { margin-top: 18px; font-size: 17px; color: #8f86c0; }
+      .cards { display: flex; gap: 24px; flex: 1; justify-content: flex-end; }
+      .card {
+        width: 240px; height: 380px;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        display: flex; flex-direction: column; align-items: center;
+        padding-top: 22px;
+      }
+      .imgwrap { position: relative; width: 190px; height: 190px; }
+      .imgwrap img { width: 190px; height: 190px; }
+      .arrow {
+        position: absolute; top: 78px; font-size: 40px; font-weight: 800;
+        background: linear-gradient(135deg, #a78bfa, #60a5fa);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      .arrow.l { left: -28px; }
+      .arrow.r { right: -28px; }
+      .label { margin-top: 16px; font-size: 21px; font-weight: 800; text-align: center; }
+      .sub { margin-top: 6px; font-size: 15.5px; color: #c6c0e4; text-align: center; line-height: 1.35; padding: 0 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <div class="brand"><div class="dot"></div><h1>GesturePlay</h1></div>
+      <div class="tag">Control video with your <b>hand</b> — through your webcam. Works on <b>YouTube</b> &amp; <b>Bilibili</b>.</div>
+      <div class="priv">100% on-device AI · zero network requests</div>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="imgwrap">
+          <span class="arrow l">⟵</span>
+          <img src="../../assets/store/gesture-pinch.png" alt="" />
+          <span class="arrow r">⟶</span>
+        </div>
+        <div class="label">Pinch</div>
+        <div class="sub">3 fingers up — move to scrub</div>
+      </div>
+      <div class="card">
+        <div class="imgwrap"><img src="../../assets/store/gesture-fist.png" alt="" /></div>
+        <div class="label">Fist</div>
+        <div class="sub">hold ½ s — play / pause</div>
+      </div>
+      <div class="card">
+        <div class="imgwrap"><img src="../../assets/store/gesture-palm.png" alt="" /></div>
+        <div class="label">Open palm</div>
+        <div class="sub">rest — does nothing</div>
+      </div>
+    </div>
+  </body>
+</html>
