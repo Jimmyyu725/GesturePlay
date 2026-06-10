@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GesturePlay",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Control YouTube / Bilibili with webcam hand gestures: pinch to drag the progress bar, make a fist to play/pause.",
   "permissions": ["storage"],
   "icons": {
