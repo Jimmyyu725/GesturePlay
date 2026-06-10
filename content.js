@@ -53,6 +53,7 @@
     gsHold: 0.35,
     gsFingers: 3,
     gsPinch: 0.05,
+    gsRange: 60, // seconds per full-width sweep; 0 = whole video. Fine scrubbing by default.
     gsPreview: false,
     gsLang: "auto",
   };
@@ -87,6 +88,7 @@
       requiredFingers: typeof s.gsFingers === "number" ? s.gsFingers : 3,
       pinchOn: pinchOn,
       pinchOff: pinchOn + 0.02,
+      rangeSec: typeof s.gsRange === "number" ? s.gsRange : 60,
     });
   }
 
@@ -462,7 +464,7 @@
       if (area !== "sync") return;
       // Only rebuild the machine for gesture-affecting keys (preserves any
       // in-progress gesture when the user just flips the preview toggle).
-      if (changes.gsDeadzone || changes.gsHold || changes.gsFingers || changes.gsPinch) {
+      if (changes.gsDeadzone || changes.gsHold || changes.gsFingers || changes.gsPinch || changes.gsRange) {
         loadSettings(applyMachine);
       }
       if (changes.gsPreview) {

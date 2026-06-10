@@ -14,6 +14,7 @@
     holdMs: 350, // fist must be held this long (milliseconds) to toggle play/pause
     requiredFingers: 3, // middle/ring/pinky that must be extended to START a scrub (anti-false-trigger)
     deadzone: 0.05, // hand must move this far (normalized x) after pinching before the bar starts moving
+    rangeSec: 0, // seconds covered by a full-width hand sweep; 0 = the whole video (proportional)
   };
 
   function isFiniteNum(v) {
@@ -117,8 +118,13 @@
             }
           }
           if (dragActive) {
-            fraction = clamp01(anchorFraction + (xSmooth - anchorX));
-            seekTo = fraction * video.duration;
+            // Fixed-range scrubbing: a full-width sweep covers rangeSec seconds
+            // (capped at the video length so short videos never get MORE
+            // sensitive than proportional). rangeSec 0 = proportional.
+            const dur = video.duration;
+            const range = o.rangeSec > 0 ? Math.min(o.rangeSec, dur) : dur;
+            fraction = clamp01(anchorFraction + (xSmooth - anchorX) * (range / dur));
+            seekTo = fraction * dur;
           }
         }
       }

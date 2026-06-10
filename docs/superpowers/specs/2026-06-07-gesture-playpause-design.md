@@ -145,3 +145,11 @@ Borrowed from reviewing another extension ("YouTube Shorts Gesture Control"). Tw
 - **Fist hold timing by timestamp:** gesture-core's fist debounce switched from frame counting (`holdFrames`, which assumed a steady 30fps — on a slow CPU-fallback machine "0.35s" silently stretched) to wall-clock milliseconds (`holdMs`). `update(frame, video, nowMs)` takes a monotonic timestamp (content.js passes `performance.now()`); a synthetic ~33ms/call clock keeps timestamp-less callers/tests working.
 - **Settings roam via `chrome.storage.sync`:** all settings moved from storage.local to storage.sync (follows the Chrome profile across machines). Slider writes are debounced (200ms) to stay inside sync's write quotas. A one-time `gsMigrated`-flagged migration carries old local values over. The first-run camera hint stays in storage.local on purpose (camera permission is per-device).
 - **CI + LICENSE:** GitHub Actions workflow runs the unit tests, syntax checks, manifest validation, and i18n key-parity on every push/PR. MIT license added.
+
+## 14. v0.9.0: fine scrubbing by default (scrub range)
+
+User feedback: "full width = whole video" is too coarse for long videos — and the original goal was "seek forward/back a few seconds". Changes:
+
+- gesture-core gains `rangeSec`: a full-width hand sweep covers `min(rangeSec, duration)` seconds; `0` = the old proportional whole-video mapping. The deadzone still works in hand-x space, so the hand feel of the activation threshold is unchanged.
+- Product default `gsRange: 60` (one sweep = 1 minute, capped at the video length so short videos never get MORE sensitive than proportional). gesture-core's own default stays `0` for backward compatibility; the product default lives in content.js SETTINGS_DEFAULTS.
+- Settings popup gains a "Scrub range" dropdown: 30 s / 1 min / 2 min / 5 min / Whole video.

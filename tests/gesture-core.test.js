@@ -302,5 +302,41 @@ console.log("gesture-core");
   ok("activation has no jump (eff = raw - deadzone => 5s, not 15s)", approx(r.seekTo, 5, 1e-6));
 })();
 
+// 29. Fixed-range scrubbing: full-width sweep covers rangeSec, not the whole video.
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0, rangeSec: 60 });
+  const v = { currentTime: 300, duration: 600 };
+  m.update({ x: 0.2, d: 0.03, present: true, ext: 3 }, v); // anchor at 300s
+  const r = m.update({ x: 0.7, d: 0.03, present: true, ext: 3 }, v); // Δx 0.5 -> +30s
+  ok("rangeSec 60: Δx 0.5 -> +30s (not +300s)", approx(r.seekTo, 330, 1e-6));
+})();
+
+// 30. Fixed-range scrubbing clamps at the video ends.
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0, rangeSec: 60 });
+  const v = { currentTime: 590, duration: 600 };
+  m.update({ x: 0.2, d: 0.03, present: true, ext: 3 }, v); // anchor at 590s
+  const r = m.update({ x: 0.9, d: 0.03, present: true, ext: 3 }, v); // +42s -> clamp 600
+  ok("rangeSec clamps at duration", approx(r.seekTo, 600, 1e-6));
+})();
+
+// 31. rangeSec longer than the video falls back to proportional (capped).
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0, rangeSec: 60 });
+  const v = { currentTime: 0, duration: 30 };
+  m.update({ x: 0.2, d: 0.03, present: true, ext: 3 }, v); // anchor at 0s
+  const r = m.update({ x: 0.7, d: 0.03, present: true, ext: 3 }, v); // Δx 0.5 of min(60,30)=30 -> +15s
+  ok("rangeSec capped at duration (short video)", approx(r.seekTo, 15, 1e-6));
+})();
+
+// 32. rangeSec 0 keeps the proportional whole-video mapping.
+(function () {
+  const m = GC.createMachine({ ema: 1, deadzone: 0, rangeSec: 0 });
+  const v = { currentTime: 0, duration: 100 };
+  m.update({ x: 0.2, d: 0.03, present: true, ext: 3 }, v);
+  const r = m.update({ x: 0.7, d: 0.03, present: true, ext: 3 }, v); // Δx 0.5 -> 50s
+  ok("rangeSec 0 = proportional", approx(r.seekTo, 50, 1e-6));
+})();
+
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

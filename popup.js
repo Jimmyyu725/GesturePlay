@@ -6,6 +6,7 @@ const DEFAULTS = {
   gsHold: 0.35,
   gsFingers: 3,
   gsPinch: 0.05,
+  gsRange: 60,
   gsPreview: false,
   gsLang: "auto",
 };
@@ -67,6 +68,7 @@ function render(s) {
   $("vFingers").textContent = String(s.gsFingers);
   $("pinch").value = s.gsPinch;
   $("vPinch").textContent = fix(s.gsPinch, 3);
+  $("range").value = String(s.gsRange);
   $("preview").checked = !!s.gsPreview;
   $("lang").value = s.gsLang;
   applyI18n(I.resolve(s.gsLang));
@@ -106,6 +108,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const v = parseFloat(e.target.value);
     $("vPinch").textContent = fix(v, 3);
     save("gsPinch", v);
+  });
+  $("range").addEventListener("change", function (e) {
+    save("gsRange", parseInt(e.target.value, 10), 0);
   });
   $("preview").addEventListener("change", function (e) {
     save("gsPreview", e.target.checked, 0);

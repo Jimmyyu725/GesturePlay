@@ -48,7 +48,7 @@ Then:
 | ✊ Hold a fist ~0.5s | Toggle play / pause (fist again to toggle back) |
 | Open palm / hand out of frame | Resting pose, does nothing |
 
-Sensitivity: **the full camera width = the whole video**, so short videos are very sensitive and long videos jump far with one sweep.
+Sensitivity: by default **one full hand sweep = 1 minute** (fine scrubbing; capped at the video length). Change the scrub range in the settings — 30 s / 1 min / 2 min / 5 min, or "Whole video" to sweep across everything in one motion.
 
 Start deadzone: small wobble right after pinching does **not** move the bar; scrubbing begins only once your hand has moved past a threshold (so it doesn't twitch the instant you pinch).
 
@@ -58,6 +58,7 @@ Click the GestureSeek toolbar icon to open the popup. All sliders apply **live**
 
 - **Enable GestureSeek** — master switch; off stops the camera and all gestures.
 - **Language** — Auto (follow the browser), 中文, or English; switches both the popup and the in-page messages.
+- **Scrub range** — how many seconds one full hand sweep covers (30 s to 5 min, or the whole video). Default: 1 minute.
 - **Start deadzone** — how far the hand must move before scrubbing begins (higher = steadier).
 - **Fist hold time** — how long a fist must be held to toggle play/pause.
 - **Fingers required to scrub** — 3 (fewest false triggers), 2 (easier to pose), or 1 (loosest).

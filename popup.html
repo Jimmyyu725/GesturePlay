@@ -58,7 +58,7 @@
         width: 100%;
         accent-color: #7c3aed;
       }
-      select#lang {
+      select {
         width: 100%;
         padding: 5px;
         border-radius: 8px;
@@ -122,6 +122,18 @@
     </div>
 
     <div class="sec" data-i18n="secSensitivity">Sensitivity (applies live)</div>
+
+    <div class="row">
+      <div class="lab"><span data-i18n="labRange"></span></div>
+      <select id="range">
+        <option value="30" data-i18n="range30s">30 seconds</option>
+        <option value="60" data-i18n="range1m">1 minute</option>
+        <option value="120" data-i18n="range2m">2 minutes</option>
+        <option value="300" data-i18n="range5m">5 minutes</option>
+        <option value="0" data-i18n="rangeWhole">Whole video</option>
+      </select>
+      <div class="hint" data-i18n="hintRange"></div>
+    </div>
 
     <div class="row">
       <div class="lab"><span data-i18n="labDeadzone"></span><span class="val" id="vDead">0.05</span></div>

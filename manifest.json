@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GestureSeek",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Control YouTube / Bilibili with webcam hand gestures: pinch to drag the progress bar, make a fist to play/pause.",
   "permissions": ["storage"],
   "icons": {
