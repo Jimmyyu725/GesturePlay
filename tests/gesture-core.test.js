@@ -152,86 +152,98 @@ console.log("gesture-core");
   ok("fraction matches seekTo/duration", approx(r.fraction, r.seekTo / 200, 1e-9));
 })();
 
-// 16. Fist held to threshold toggles play/pause exactly once (edge-triggered).
+// 16. Fist held to the time threshold toggles play/pause exactly once (edge-triggered).
 (function () {
-  const m = GC.createMachine({ holdFrames: 3 });
+  const m = GC.createMachine({ holdMs: 100 });
   const v = { currentTime: 0, duration: 100 };
   const open = { x: 0.5, d: 0.3, present: true, fist: false };
   const fist = { x: 0.5, d: 0.3, present: true, fist: true };
-  const r1 = m.update(fist, v);
-  const r2 = m.update(fist, v);
-  const r3 = m.update(fist, v); // 3rd frame hits holdFrames
-  ok("fist reaches threshold -> toggle on 3rd frame", !r1.togglePlay && !r2.togglePlay && r3.togglePlay === true);
-  const r4 = m.update(fist, v);
+  const r1 = m.update(fist, v, 0); // hold starts
+  const r2 = m.update(fist, v, 50); // 50ms < 100ms
+  const r3 = m.update(fist, v, 100); // 100ms >= 100ms -> toggle
+  ok("fist held to holdMs -> toggles", !r1.togglePlay && !r2.togglePlay && r3.togglePlay === true);
+  const r4 = m.update(fist, v, 200);
   ok("continued fist does NOT re-toggle", r4.togglePlay === false);
-  m.update(open, v); // open hand re-arms
-  m.update(fist, v);
-  m.update(fist, v);
-  const r7 = m.update(fist, v);
+  m.update(open, v, 250); // open hand re-arms
+  m.update(fist, v, 300);
+  const r7 = m.update(fist, v, 410); // held 110ms
   ok("re-fist after opening toggles again", r7.togglePlay === true);
 })();
 
-// 17. Fist held below threshold never toggles.
+// 17. Fist held below the time threshold never toggles.
 (function () {
-  const m = GC.createMachine({ holdFrames: 5 });
+  const m = GC.createMachine({ holdMs: 500 });
   const v = { currentTime: 0, duration: 100 };
   let any = false;
-  for (let k = 0; k < 3; k++) if (m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v).togglePlay) any = true;
+  for (const t of [0, 100, 200]) {
+    if (m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, t).togglePlay) any = true;
+  }
   ok("fist below hold threshold does not toggle", any === false);
 })();
 
 // 18. Losing the hand re-arms the fist toggle.
 (function () {
-  const m = GC.createMachine({ holdFrames: 2 });
+  const m = GC.createMachine({ holdMs: 100 });
   const v = { currentTime: 0, duration: 100 };
-  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v);
-  const t = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v);
+  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 0);
+  const t = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 100);
   ok("fist toggles at threshold", t.togglePlay === true);
-  m.update({ present: false }, v); // hand lost
-  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v);
-  const t2 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v);
+  m.update({ present: false }, v, 150); // hand lost
+  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 200);
+  const t2 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 310);
   ok("hand-lost re-arms the toggle", t2.togglePlay === true);
+})();
+
+// 18b. Synthetic-clock fallback: no timestamps passed, hold still times out (~33ms/call).
+(function () {
+  const m = GC.createMachine({ holdMs: 50 });
+  const v = { currentTime: 0, duration: 100 };
+  const fist = { x: 0.5, d: 0.3, present: true, fist: true };
+  const r1 = m.update(fist, v); // start
+  const r2 = m.update(fist, v); // ~33ms held
+  const r3 = m.update(fist, v); // ~67ms held -> toggle
+  ok("synthetic clock fallback toggles without timestamps", !r1.togglePlay && !r2.togglePlay && r3.togglePlay === true);
 })();
 
 // 19. BUG FIX: a fist with small thumb-index distance must NOT start scrubbing.
 (function () {
-  const m = GC.createMachine({ holdFrames: 3, ema: 1 });
+  const m = GC.createMachine({ holdMs: 100, ema: 1 });
   const v = { currentTime: 0, duration: 100 };
-  const r = m.update({ x: 0.5, d: 0.03, present: true, fist: true }, v);
+  const r = m.update({ x: 0.5, d: 0.03, present: true, fist: true }, v, 0);
   ok("fist + small d does not enter DRAGGING (bug fix)", m.state === "IDLE" && r.seekTo === null);
 })();
 
 // 20. A fist during DRAGGING releases the drag without an immediate toggle/seek.
 (function () {
-  const m = GC.createMachine({ holdFrames: 3, ema: 1 });
+  const m = GC.createMachine({ holdMs: 100, ema: 1 });
   const v = { currentTime: 0, duration: 100 };
-  m.update({ x: 0.5, d: 0.03, present: true, fist: false }, v); // enter DRAGGING
+  m.update({ x: 0.5, d: 0.03, present: true, fist: false }, v, 0); // enter DRAGGING
   ok("entered DRAGGING via pinch", m.state === "DRAGGING");
-  const r = m.update({ x: 0.6, d: 0.03, present: true, fist: true }, v);
+  const r = m.update({ x: 0.6, d: 0.03, present: true, fist: true }, v, 33);
   ok("fist during drag releases, no immediate toggle/seek", m.state === "IDLE" && r.seekTo === null && !r.togglePlay);
 })();
 
-// 21. reset() clears the fist counter/arming.
+// 21. reset() clears the fist hold timer/arming.
 (function () {
-  const m = GC.createMachine({ holdFrames: 2 });
+  const m = GC.createMachine({ holdMs: 100 });
   const v = { currentTime: 0, duration: 100 };
-  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v); // fistFrames=1
+  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 0); // hold starts
   m.reset();
-  const r1 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v); // must restart from 1
-  ok("reset clears fist counter (no premature toggle)", r1.togglePlay === false);
-  const r2 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v); // 2 -> toggle
+  const r1 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 50); // timer restarts at 50
+  ok("reset clears fist timer (no premature toggle)", r1.togglePlay === false);
+  const r2 = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 150); // 100ms held -> toggle
   ok("toggles after reset + threshold", r2.togglePlay === true);
 })();
 
 // 22. Sustained fist AFTER a drag release eventually toggles.
 (function () {
-  const m = GC.createMachine({ holdFrames: 3, ema: 1 });
+  const m = GC.createMachine({ holdMs: 100, ema: 1 });
   const v = { currentTime: 0, duration: 100 };
-  m.update({ x: 0.5, d: 0.03, present: true, fist: false }, v); // DRAGGING
-  const rel = m.update({ x: 0.5, d: 0.03, present: true, fist: true }, v); // release, fistFrames=1
+  m.update({ x: 0.5, d: 0.03, present: true, fist: false }, v, 0); // DRAGGING
+  const rel = m.update({ x: 0.5, d: 0.03, present: true, fist: true }, v, 33); // release; hold starts
   ok("drag releases on fist with no immediate toggle", m.state === "IDLE" && !rel.togglePlay);
-  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v); // 2
-  const t = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v); // 3 -> toggle
+  m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 90);
+  const t = m.update({ x: 0.5, d: 0.3, present: true, fist: true }, v, 140); // 107ms held -> toggle
   ok("sustained fist after drag release toggles", t.togglePlay === true);
 })();
 

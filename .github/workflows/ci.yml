@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # The unit tests are dependency-free (plain node), so no npm install.
+      - name: Run unit tests
+        run: node tests/gesture-core.test.js
+      - name: Syntax-check extension scripts
+        run: |
+          node --check gesture-core.js
+          node --check content.js
+          node --check popup.js
+          node --check i18n.js
+          cp camera.js /tmp/camera-check.mjs
+          node --check /tmp/camera-check.mjs
+      - name: Validate manifest and i18n key parity
+        run: |
+          node -e "const m=require('./manifest.json'); if(m.manifest_version!==3) throw new Error('bad manifest'); console.log('manifest v'+m.version+' OK')"
+          node -e "
+            global.navigator={language:'en'};
+            require('./i18n.js');
+            const d=globalThis.GSI18N.dict;
+            const en=Object.keys(d.en).sort(), zh=Object.keys(d.zh).sort();
+            if (JSON.stringify(en)!==JSON.stringify(zh)) throw new Error('i18n key mismatch');
+            console.log('i18n parity OK ('+en.length+' keys)');
+          "

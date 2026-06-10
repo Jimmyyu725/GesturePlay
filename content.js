@@ -43,8 +43,38 @@
   let firstRunHintChecked = false;
   let previewOn = false; // debug camera/skeleton preview (popup setting)
 
-  // --- settings (popup -> chrome.storage -> here) --------------------------
-  const SETTINGS_DEFAULTS = { gsDeadzone: 0.05, gsHold: 0.35, gsFingers: 3, gsPinch: 0.05, gsPreview: false, gsLang: "auto" };
+  // --- settings (popup -> chrome.storage.sync -> here) ---------------------
+  // Settings live in chrome.storage.sync so they roam with the browser profile
+  // across machines. The one-time first-run hint stays in storage.local on
+  // purpose (camera permission is per-device, so the hint should be too).
+  const SETTINGS_DEFAULTS = {
+    gsEnabled: true,
+    gsDeadzone: 0.05,
+    gsHold: 0.35,
+    gsFingers: 3,
+    gsPinch: 0.05,
+    gsPreview: false,
+    gsLang: "auto",
+  };
+
+  // One-time migration of pre-v0.8 settings from storage.local to storage.sync.
+  function migrateLocalToSync(done) {
+    try {
+      chrome.storage.sync.get({ gsMigrated: false }, function (flag) {
+        if (flag && flag.gsMigrated) return done();
+        chrome.storage.local.get(
+          ["gsDeadzone", "gsHold", "gsFingers", "gsPinch", "gsPreview", "gsLang"],
+          function (old) {
+            const carried = { gsMigrated: true };
+            for (const k in old) if (old[k] !== undefined) carried[k] = old[k];
+            chrome.storage.sync.set(carried, done);
+          }
+        );
+      });
+    } catch (e) {
+      done();
+    }
+  }
 
   // Rebuild the gesture machine from the tuning settings. Only call this when a
   // gesture-affecting key actually changed — recreating the machine resets any
@@ -53,7 +83,7 @@
     const pinchOn = typeof s.gsPinch === "number" ? s.gsPinch : 0.05;
     machine = GC.createMachine({
       deadzone: typeof s.gsDeadzone === "number" ? s.gsDeadzone : 0.05,
-      holdFrames: Math.max(1, Math.round((typeof s.gsHold === "number" ? s.gsHold : 0.35) * 30)),
+      holdMs: Math.max(50, Math.round((typeof s.gsHold === "number" ? s.gsHold : 0.35) * 1000)),
       requiredFingers: typeof s.gsFingers === "number" ? s.gsFingers : 3,
       pinchOn: pinchOn,
       pinchOff: pinchOn + 0.02,
@@ -72,9 +102,16 @@
     lang = I18N ? I18N.resolve(s.gsLang) : "en";
   }
 
+  // Master switch: off tears the camera down entirely; on re-activates.
+  let enabled = true;
+  function applyEnabled(s) {
+    enabled = s.gsEnabled !== false;
+    sync();
+  }
+
   function loadSettings(cb) {
     try {
-      chrome.storage.local.get(SETTINGS_DEFAULTS, function (s) {
+      chrome.storage.sync.get(SETTINGS_DEFAULTS, function (s) {
         cb(Object.assign({}, SETTINGS_DEFAULTS, s));
       });
     } catch (e) {
@@ -240,7 +277,7 @@
   function onFrame(frame) {
     const v = getVideo();
     if (!v) return;
-    const res = machine.update(frame, { currentTime: v.currentTime, duration: v.duration });
+    const res = machine.update(frame, { currentTime: v.currentTime, duration: v.duration }, performance.now());
 
     // Fist held -> toggle play/pause (native UI shows the play/pause animation).
     if (res.togglePlay) {
@@ -371,7 +408,7 @@
 
   // --- lifecycle -----------------------------------------------------------
   function sync() {
-    if (isVideoPage()) {
+    if (enabled && isVideoPage()) {
       if (getVideo()) ensureIframe();
     } else {
       removeIframe();
@@ -412,14 +449,17 @@
   window.addEventListener("yt-navigate-finish", onNavigate);
 
   // Settings: load now, and re-apply live whenever the popup changes them.
-  loadSettings(function (s) {
-    applyMachine(s);
-    applyPreview(s);
-    applyLang(s);
+  migrateLocalToSync(function () {
+    loadSettings(function (s) {
+      applyMachine(s);
+      applyPreview(s);
+      applyLang(s);
+      applyEnabled(s);
+    });
   });
   try {
     chrome.storage.onChanged.addListener(function (changes, area) {
-      if (area !== "local") return;
+      if (area !== "sync") return;
       // Only rebuild the machine for gesture-affecting keys (preserves any
       // in-progress gesture when the user just flips the preview toggle).
       if (changes.gsDeadzone || changes.gsHold || changes.gsFingers || changes.gsPinch) {
@@ -430,6 +470,9 @@
       }
       if (changes.gsLang) {
         loadSettings(applyLang);
+      }
+      if (changes.gsEnabled) {
+        loadSettings(applyEnabled);
       }
     });
   } catch (e) {

@@ -1,6 +1,14 @@
-// popup.js — GestureSeek settings + language. Persists to chrome.storage.local;
-// content.js reads these and applies them live.
-const DEFAULTS = { gsDeadzone: 0.05, gsHold: 0.35, gsFingers: 3, gsPinch: 0.05, gsPreview: false, gsLang: "auto" };
+// popup.js — GestureSeek settings + language. Persists to chrome.storage.sync
+// so settings roam with the browser profile; content.js applies them live.
+const DEFAULTS = {
+  gsEnabled: true,
+  gsDeadzone: 0.05,
+  gsHold: 0.35,
+  gsFingers: 3,
+  gsPinch: 0.05,
+  gsPreview: false,
+  gsLang: "auto",
+};
 const I = globalThis.GSI18N;
 
 function $(id) {
@@ -8,6 +16,37 @@ function $(id) {
 }
 function fix(v, dec) {
   return Number(v).toFixed(dec);
+}
+
+// storage.sync enforces write-rate quotas (~120/min); slider "input" events fire
+// continuously while dragging, so debounce the writes per key.
+const saveTimers = {};
+function save(key, value, delayMs) {
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(function () {
+    const o = {};
+    o[key] = value;
+    chrome.storage.sync.set(o);
+  }, delayMs == null ? 200 : delayMs);
+}
+
+// One-time migration of pre-v0.8 settings from storage.local to storage.sync.
+function migrateLocalToSync(done) {
+  try {
+    chrome.storage.sync.get({ gsMigrated: false }, function (flag) {
+      if (flag && flag.gsMigrated) return done();
+      chrome.storage.local.get(
+        ["gsDeadzone", "gsHold", "gsFingers", "gsPinch", "gsPreview", "gsLang"],
+        function (old) {
+          const carried = { gsMigrated: true };
+          for (const k in old) if (old[k] !== undefined) carried[k] = old[k];
+          chrome.storage.sync.set(carried, done);
+        }
+      );
+    });
+  } catch (e) {
+    done();
+  }
 }
 
 // Fill every [data-i18n] element with the string for the resolved language.
@@ -19,6 +58,7 @@ function applyI18n(lang) {
 }
 
 function render(s) {
+  $("enabled").checked = s.gsEnabled !== false;
   $("deadzone").value = s.gsDeadzone;
   $("vDead").textContent = fix(s.gsDeadzone, 2);
   $("hold").value = s.gsHold;
@@ -33,41 +73,46 @@ function render(s) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  chrome.storage.local.get(DEFAULTS, function (s) {
-    render(Object.assign({}, DEFAULTS, s));
+  migrateLocalToSync(function () {
+    chrome.storage.sync.get(DEFAULTS, function (s) {
+      render(Object.assign({}, DEFAULTS, s));
+    });
   });
 
+  $("enabled").addEventListener("change", function (e) {
+    save("gsEnabled", e.target.checked, 0);
+  });
   $("lang").addEventListener("change", function (e) {
     const v = e.target.value;
-    chrome.storage.local.set({ gsLang: v });
+    save("gsLang", v, 0);
     applyI18n(I.resolve(v));
   });
   $("deadzone").addEventListener("input", function (e) {
     const v = parseFloat(e.target.value);
     $("vDead").textContent = fix(v, 2);
-    chrome.storage.local.set({ gsDeadzone: v });
+    save("gsDeadzone", v);
   });
   $("hold").addEventListener("input", function (e) {
     const v = parseFloat(e.target.value);
     $("vHold").textContent = fix(v, 2);
-    chrome.storage.local.set({ gsHold: v });
+    save("gsHold", v);
   });
   $("fingers").addEventListener("input", function (e) {
     const v = parseInt(e.target.value, 10);
     $("vFingers").textContent = String(v);
-    chrome.storage.local.set({ gsFingers: v });
+    save("gsFingers", v);
   });
   $("pinch").addEventListener("input", function (e) {
     const v = parseFloat(e.target.value);
     $("vPinch").textContent = fix(v, 3);
-    chrome.storage.local.set({ gsPinch: v });
+    save("gsPinch", v);
   });
   $("preview").addEventListener("change", function (e) {
-    chrome.storage.local.set({ gsPreview: e.target.checked });
+    save("gsPreview", e.target.checked, 0);
   });
 
   $("reset").addEventListener("click", function () {
-    chrome.storage.local.set(DEFAULTS, function () {
+    chrome.storage.sync.set(DEFAULTS, function () {
       render(DEFAULTS);
     });
   });

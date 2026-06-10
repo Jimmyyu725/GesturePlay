@@ -56,12 +56,15 @@ Start deadzone: small wobble right after pinching does **not** move the bar; scr
 
 Click the GestureSeek toolbar icon to open the popup. All sliders apply **live**:
 
+- **Enable GestureSeek** — master switch; off stops the camera and all gestures.
 - **Language** — Auto (follow the browser), 中文, or English; switches both the popup and the in-page messages.
 - **Start deadzone** — how far the hand must move before scrubbing begins (higher = steadier).
 - **Fist hold time** — how long a fist must be held to toggle play/pause.
 - **Fingers required to scrub** — 3 (fewest false triggers), 2 (easier to pose), or 1 (loosest).
 - **Pinch sensitivity** — thumb-to-index distance that counts as a pinch.
 - **Show camera preview + hand skeleton** — a small corner window showing the detected hand; handy while tuning, turn it off afterwards.
+
+Settings are stored in `chrome.storage.sync`, so they follow your browser profile across machines (e.g. Windows ↔ macOS) when Chrome sync is on.
 
 ## How it works
 

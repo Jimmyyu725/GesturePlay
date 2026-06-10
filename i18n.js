@@ -7,6 +7,8 @@
 
   const dict = {
     en: {
+      labEnabled: "Enable GestureSeek",
+      hintEnabled: "Off stops the camera and all gestures.",
       summary1: "Pinch + middle/ring/pinky up → scrub; move right = forward.",
       summary2: "✊ Hold a fist → toggle play / pause.",
       secSensitivity: "Sensitivity (applies live)",
@@ -33,6 +35,8 @@
       initFail: "GestureSeek: initialization failed — ",
     },
     zh: {
+      labEnabled: "启用 GestureSeek",
+      hintEnabled: "关闭后摄像头与所有手势全部停用。",
       summary1: "捏合 + 中/无名/小指竖起 → 拖进度;手往右 = 前进。",
       summary2: "✊ 握拳保持 → 切换 播放 / 暂停。",
       secSensitivity: "灵敏度(实时生效)",

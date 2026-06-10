@@ -138,3 +138,10 @@ Borrowed from reviewing another extension ("YouTube Shorts Gesture Control"). Tw
 
 - **Settings popup (sliders, apply live):** start deadzone, fist hold time (seconds → `holdFrames`), fingers required to scrub (1–3 → `requiredFingers`), pinch sensitivity (`pinchOn`, with `pinchOff = pinchOn + 0.02`). popup.js writes to `chrome.storage.local`; content.js reads them, rebuilds the gesture machine on change, and re-applies live. The preview toggle is a **pure UI change** and does NOT rebuild the machine (so it never drops an in-progress gesture).
 - **Optional camera + skeleton preview:** a popup toggle. When on, content.js resizes the camera iframe into a visible 240×180 corner window and tells camera.js (via a `gs-preview` message, resent on `gs-ready`) to draw the mirrored webcam + 21-point hand skeleton onto a canvas. Off by default; useful while tuning. (Not painted in real fullscreen — acceptable for a debug aid.)
+
+## 13. v0.8.0: tier-1 improvements
+
+- **Master switch (`gsEnabled`):** a prominent popup toggle; off calls removeIframe() (camera fully stops), on re-runs sync(). The activation gate in sync() checks `enabled` first.
+- **Fist hold timing by timestamp:** gesture-core's fist debounce switched from frame counting (`holdFrames`, which assumed a steady 30fps — on a slow CPU-fallback machine "0.35s" silently stretched) to wall-clock milliseconds (`holdMs`). `update(frame, video, nowMs)` takes a monotonic timestamp (content.js passes `performance.now()`); a synthetic ~33ms/call clock keeps timestamp-less callers/tests working.
+- **Settings roam via `chrome.storage.sync`:** all settings moved from storage.local to storage.sync (follows the Chrome profile across machines). Slider writes are debounced (200ms) to stay inside sync's write quotas. A one-time `gsMigrated`-flagged migration carries old local values over. The first-run camera hint stays in storage.local on purpose (camera permission is per-device).
+- **CI + LICENSE:** GitHub Actions workflow runs the unit tests, syntax checks, manifest validation, and i18n key-parity on every push/PR. MIT license added.

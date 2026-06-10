@@ -11,7 +11,7 @@
     pinchOn: 0.05, // enter DRAGGING when thumb-index distance < this
     pinchOff: 0.07, // leave DRAGGING when distance > this (hysteresis)
     ema: 0.5, // x smoothing factor (0..1], higher = more responsive
-    holdFrames: 10, // fist must be held this many frames (~0.35s @30fps) to toggle play/pause
+    holdMs: 350, // fist must be held this long (milliseconds) to toggle play/pause
     requiredFingers: 3, // middle/ring/pinky that must be extended to START a scrub (anti-false-trigger)
     deadzone: 0.05, // hand must move this far (normalized x) after pinching before the bar starts moving
   };
@@ -42,27 +42,34 @@
     let xSmooth = null;
     let anchorX = 0;
     let anchorFraction = 0;
-    let fistFrames = 0; // consecutive frames the fist has been held (while not dragging)
+    let fistStartAt = null; // timestamp (ms) when the current fist hold began
     let toggleArmed = true; // edge gate: must see a non-fist frame before toggling again
     let dragActive = false; // DRAGGING but movement hasn't passed the start deadzone yet
+    let synthNow = 0; // fallback clock for callers that don't pass timestamps
 
     function reset() {
       state = "IDLE";
       xSmooth = null;
       anchorX = 0;
       anchorFraction = 0;
-      fistFrames = 0;
+      fistStartAt = null;
       toggleArmed = true;
       dragActive = false;
     }
 
-    function update(frame, video) {
+    function update(frame, video, nowMs) {
+      // Time source: callers pass a monotonic timestamp (performance.now()).
+      // When absent (older callers/tests), fall back to a synthetic clock that
+      // advances one nominal 30fps frame per call so hold timing still works.
+      synthNow += 1000 / 30;
+      const now = isFiniteNum(nowMs) ? nowMs : synthNow;
+
       // No hand, or malformed coordinates: release, clear the smoother so a bad
       // frame can't poison later frames, and re-arm the fist toggle.
       if (!frame || !frame.present || !isFiniteNum(frame.x)) {
         state = "IDLE";
         xSmooth = null;
-        fistFrames = 0;
+        fistStartAt = null;
         toggleArmed = true;
         return { state: state, seekTo: null, fraction: null, togglePlay: false };
       }
@@ -116,18 +123,18 @@
         }
       }
 
-      // --- fist toggle (debounced + edge-triggered; never while dragging) ---
+      // --- fist toggle (time-debounced + edge-triggered; never while dragging) ---
       let togglePlay = false;
       if (state === "DRAGGING") {
-        fistFrames = 0; // scrubbing: ignore fist entirely
+        fistStartAt = null; // scrubbing: ignore fist entirely
       } else if (fist) {
-        fistFrames++;
-        if (fistFrames >= o.holdFrames && toggleArmed) {
+        if (fistStartAt === null) fistStartAt = now;
+        if (now - fistStartAt >= o.holdMs && toggleArmed) {
           togglePlay = true;
           toggleArmed = false; // fire once; require an open frame to re-arm
         }
       } else {
-        fistFrames = 0;
+        fistStartAt = null;
         toggleArmed = true; // hand opened => allow the next fist to toggle
       }
 
