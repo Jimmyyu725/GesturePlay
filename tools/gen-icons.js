@@ -1,4 +1,4 @@
-// Generates GestureSeek extension icons (16/32/48/128) as PNGs.
+// Generates GesturePlay extension icons (16/32/48/128) as PNGs.
 // No deps — raw RGBA buffer encoded to PNG via zlib.
 // Motif: a pinch — two near-touching dots on a violet→blue gradient.
 const zlib = require("zlib");

@@ -1,4 +1,4 @@
-# GestureSeek — Fist toggles play/pause + fix fist-misread-as-pinch (v0.5)
+# GesturePlay — Fist toggles play/pause + fix fist-misread-as-pinch (v0.5)
 
 > Date: 2026-06-07
 > Status: Passed brainstorm, pending implementation

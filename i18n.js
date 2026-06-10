@@ -7,7 +7,7 @@
 
   const dict = {
     en: {
-      labEnabled: "Enable GestureSeek",
+      labEnabled: "Enable GesturePlay",
       hintEnabled: "Off stops the camera and all gestures.",
       summary1: "Pinch + middle/ring/pinky up → scrub; move right = forward.",
       summary2: "✊ Hold a fist → toggle play / pause.",
@@ -34,15 +34,15 @@
       langAuto: "Auto (follow browser)",
       reset: "Reset to defaults",
       // in-page toasts
-      hint: "GestureSeek: about to request camera access — click Allow (asked once; video is processed locally and never uploaded)",
-      cameraDenied: "GestureSeek: camera blocked. Click the camera icon on the left of the address bar, set it to Allow, then reload the page.",
-      cameraLost: "GestureSeek: camera disconnected. Reconnect it, then reload the page.",
-      modelFail: "GestureSeek: failed to load the hand model. Reload the page to try again.",
-      detectFail: "GestureSeek: hand detection error. Reload the page to try again.",
-      initFail: "GestureSeek: initialization failed — ",
+      hint: "GesturePlay: about to request camera access — click Allow (asked once; video is processed locally and never uploaded)",
+      cameraDenied: "GesturePlay: camera blocked. Click the camera icon on the left of the address bar, set it to Allow, then reload the page.",
+      cameraLost: "GesturePlay: camera disconnected. Reconnect it, then reload the page.",
+      modelFail: "GesturePlay: failed to load the hand model. Reload the page to try again.",
+      detectFail: "GesturePlay: hand detection error. Reload the page to try again.",
+      initFail: "GesturePlay: initialization failed — ",
     },
     zh: {
-      labEnabled: "启用 GestureSeek",
+      labEnabled: "启用 GesturePlay",
       hintEnabled: "关闭后摄像头与所有手势全部停用。",
       summary1: "捏合 + 中/无名/小指竖起 → 拖进度;手往右 = 前进。",
       summary2: "✊ 握拳保持 → 切换 播放 / 暂停。",
@@ -69,12 +69,12 @@
       langAuto: "跟随系统",
       reset: "恢复默认",
       // in-page toasts
-      hint: "GestureSeek:即将请求摄像头权限,请点击「允许」(只问一次,画面仅本地处理、不上传)",
-      cameraDenied: "GestureSeek:摄像头未授权。请点地址栏左侧的摄像头图标改为「允许」,然后刷新页面。",
-      cameraLost: "GestureSeek:摄像头连接已断开,请重新连接后刷新页面。",
-      modelFail: "GestureSeek:手势模型加载失败,请刷新页面重试。",
-      detectFail: "GestureSeek:手势识别异常,请刷新页面重试。",
-      initFail: "GestureSeek:初始化失败 — ",
+      hint: "GesturePlay:即将请求摄像头权限,请点击「允许」(只问一次,画面仅本地处理、不上传)",
+      cameraDenied: "GesturePlay:摄像头未授权。请点地址栏左侧的摄像头图标改为「允许」,然后刷新页面。",
+      cameraLost: "GesturePlay:摄像头连接已断开,请重新连接后刷新页面。",
+      modelFail: "GesturePlay:手势模型加载失败,请刷新页面重试。",
+      detectFail: "GesturePlay:手势识别异常,请刷新页面重试。",
+      initFail: "GesturePlay:初始化失败 — ",
     },
   };
 

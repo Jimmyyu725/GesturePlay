@@ -1,4 +1,4 @@
-// popup.js — GestureSeek settings + language. Persists to chrome.storage.sync
+// popup.js — GesturePlay settings + language. Persists to chrome.storage.sync
 // so settings roam with the browser profile; content.js applies them live.
 const DEFAULTS = {
   gsEnabled: true,

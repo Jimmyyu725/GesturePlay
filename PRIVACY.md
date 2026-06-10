@@ -1,17 +1,17 @@
-# GestureSeek Privacy Policy
+# GesturePlay Privacy Policy
 
 _Last updated: June 10, 2026_
 
-GestureSeek is a browser extension that lets you control video playback on
+GesturePlay is a browser extension that lets you control video playback on
 youtube.com and bilibili.com with hand gestures, using your webcam.
 
 ## The short version
 
-**GestureSeek collects no data. Nothing ever leaves your computer.**
+**GesturePlay collects no data. Nothing ever leaves your computer.**
 
 ## Camera
 
-- GestureSeek uses your webcam only to detect hand gestures, and only on
+- GesturePlay uses your webcam only to detect hand gestures, and only on
   YouTube / Bilibili video pages while the extension is enabled.
 - All video frames are processed **locally in your browser** by Google's
   MediaPipe hand-tracking model, which is bundled inside the extension.
@@ -44,4 +44,4 @@ youtube.com and bilibili.com with hand gestures, using your webcam.
 ## Contact
 
 Questions or concerns: open an issue at
-https://github.com/Jimmyyu725/GestureSeek/issues
+https://github.com/Jimmyyu725/GesturePlay/issues

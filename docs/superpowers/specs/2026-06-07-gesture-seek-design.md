@@ -1,4 +1,4 @@
-# GestureSeek — Design Doc (v2, technically verified)
+# GesturePlay — Design Doc (v2, technically verified)
 
 > Chrome extension for scrubbing a video's progress bar with a webcam pinch gesture
 > Date: 2026-06-07
@@ -132,9 +132,9 @@ state DRAGGING:
 - `host_permissions`: the same two sites.
 - Camera: **not a chrome permission** — obtained via the iframe's `getUserMedia` (extension origin, granted once).
 
-### Directory (`C:\Project\GestureSeek`)
+### Directory (`C:\Project\GesturePlay`)
 ```
-GestureSeek/
+GesturePlay/
 ├── manifest.json
 ├── content.js                  ← in page: locate video + inject iframe + state machine + currentTime + error toast
 ├── gesture-core.js             ← pure logic: state machine / smoothing / thresholds (no DOM, unit-testable)

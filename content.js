@@ -12,7 +12,7 @@
 
   const GC = globalThis.GestureCore;
   if (!GC) {
-    console.error("[GestureSeek] gesture-core not loaded");
+    console.error("[GesturePlay] gesture-core not loaded");
     return;
   }
 
@@ -191,7 +191,7 @@
     el.setAttribute("allow", "camera");
     el.setAttribute("aria-hidden", "true");
     el.setAttribute("tabindex", "-1");
-    el.setAttribute("title", "GestureSeek camera");
+    el.setAttribute("title", "GesturePlay camera");
     // Keep it rendered (NOT display:none/visibility:hidden — that would suspend
     // the camera track). Size/opacity are set by sizeIframe() (tiny when hidden,
     // a visible corner window when the debug preview is on).

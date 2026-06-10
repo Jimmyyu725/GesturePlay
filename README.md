@@ -1,4 +1,4 @@
-# GestureSeek
+# GesturePlay
 
 Control YouTube and Bilibili with **webcam hand gestures**: **pinch and drag to scrub** the progress bar, **make a fist to play/pause**.
 
@@ -9,7 +9,7 @@ Control YouTube and Bilibili with **webcam hand gestures**: **pinch and drag to 
 
 Everything runs locally (MediaPipe hand detection on your GPU). **The webcam image never leaves your machine.**
 
-While dragging, the site's **own native progress bar** moves (GestureSeek draws no bar of its own). Works while playing, paused, and in fullscreen.
+While dragging, the site's **own native progress bar** moves (GesturePlay draws no bar of its own). Works while playing, paused, and in fullscreen.
 
 ---
 
@@ -18,7 +18,7 @@ While dragging, the site's **own native progress bar** moves (GestureSeek draws 
 First get the files: clone or download this repository to any folder.
 
 ```bash
-git clone <this-repo-url> GestureSeek
+git clone <this-repo-url> GesturePlay
 ```
 
 Then:
@@ -27,14 +27,14 @@ Then:
 2. Turn on **Developer mode** (top-right).
 3. Click **Load unpacked**.
 4. Select the project folder — the one that contains `manifest.json` (wherever you cloned/downloaded it).
-5. **GestureSeek** appears in the list — installed.
+5. **GesturePlay** appears in the list — installed.
 
 > Works on any Chromium-based browser (Chrome / Edge), on Windows, macOS, and Linux. Manifest V3. On macOS, also allow Chrome to use the camera under System Settings → Privacy & Security → Camera.
 
 ## First run
 
 1. Open any **YouTube** or **Bilibili** video page.
-2. The browser asks for **camera permission** (as "GestureSeek"). Click **Allow**.
+2. The browser asks for **camera permission** (as "GesturePlay"). Click **Allow**.
    - Asked only once; it then works on both sites automatically.
    - If it didn't ask, or you denied it: click the camera icon on the left of the address bar, set it to Allow, then reload the page.
 3. Hold your hand up to the webcam and **pinch + raise three fingers, then move** to scrub.
@@ -56,9 +56,9 @@ Start deadzone: small wobble right after pinching does **not** move the bar; scr
 
 ## Settings
 
-Click the GestureSeek toolbar icon to open the popup. All sliders apply **live**:
+Click the GesturePlay toolbar icon to open the popup. All sliders apply **live**:
 
-- **Enable GestureSeek** — master switch; off stops the camera and all gestures.
+- **Enable GesturePlay** — master switch; off stops the camera and all gestures.
 - **Language** — Auto (follow the browser), 中文, or English; switches both the popup and the in-page messages.
 - **Scrub range** — how many seconds one full hand sweep covers (30 s to 5 min, or the whole video). Default: 1 minute.
 - **Start deadzone** — how far the hand must move before scrubbing begins (higher = steadier).

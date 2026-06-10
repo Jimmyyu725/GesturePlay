@@ -1,7 +1,7 @@
 # pack.ps1 - Build a clean Chrome Web Store ZIP (runtime files only).
 #
 # Usage:  powershell -ExecutionPolicy Bypass -File tools\pack.ps1
-# Output: dist\GestureSeek-v<version>.zip
+# Output: dist\GesturePlay-v<version>.zip
 #
 # Notes:
 # - Excludes dev-only files (tests, tools, docs, node_modules, git metadata,
@@ -20,7 +20,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $manifest = Get-Content (Join-Path $root "manifest.json") -Raw | ConvertFrom-Json
 $version = $manifest.version
 
-$staging = Join-Path ([System.IO.Path]::GetTempPath()) "gestureseek-pack"
+$staging = Join-Path ([System.IO.Path]::GetTempPath()) "gestureplay-pack"
 $dist = Join-Path $root "dist"
 
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -47,7 +47,7 @@ Copy-Item (Join-Path $root "lib\vision_bundle.mjs") (Join-Path $staging "lib")
 Copy-Item (Join-Path $root "lib\wasm\vision_wasm_internal.js") (Join-Path $staging "lib\wasm")
 Copy-Item (Join-Path $root "lib\wasm\vision_wasm_internal.wasm") (Join-Path $staging "lib\wasm")
 
-$zip = Join-Path $dist ("GestureSeek-v" + $version + ".zip")
+$zip = Join-Path $dist ("GesturePlay-v" + $version + ".zip")
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $zip
 

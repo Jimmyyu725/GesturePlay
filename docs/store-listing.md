@@ -8,7 +8,7 @@ Dashboard (https://chrome.google.com/webstore/devconsole).
 ## Item name
 
 ```
-GestureSeek — Hand Gesture Video Control
+GesturePlay — Hand Gesture Video Control
 ```
 
 ## Summary (max 132 chars)
@@ -44,7 +44,7 @@ TUNABLE
 Click the toolbar icon for live-updating settings: master on/off switch, scrub range, start deadzone, fist hold time, fingers required, pinch sensitivity, English/中文 interface, and an optional camera preview with a hand-skeleton overlay for tuning.
 
 PRIVATE BY DESIGN
-All hand tracking runs locally in your browser using Google's MediaPipe model, which is bundled inside the extension. No video frame ever leaves your machine. The extension makes zero network requests: no analytics, no accounts, no servers. Privacy policy: https://github.com/Jimmyyu725/GestureSeek/blob/main/PRIVACY.md
+All hand tracking runs locally in your browser using Google's MediaPipe model, which is bundled inside the extension. No video frame ever leaves your machine. The extension makes zero network requests: no analytics, no accounts, no servers. Privacy policy: https://github.com/Jimmyyu725/GesturePlay/blob/main/PRIVACY.md
 
 REQUIREMENTS
 A webcam (built-in or USB) and reasonable lighting. Camera permission is requested once on first use.
@@ -82,7 +82,7 @@ Primary: English. Optionally add a zh-CN localized description (above).
   processed in memory locally and never stored or transmitted; settings are
   stored locally/synced by Chrome and contain no personal data.)
 
-- **Privacy policy URL:** `https://github.com/Jimmyyu725/GestureSeek/blob/main/PRIVACY.md`
+- **Privacy policy URL:** `https://github.com/Jimmyyu725/GesturePlay/blob/main/PRIVACY.md`
   (the repository must be public for reviewers to read it — either make the
   repo public, or paste PRIVACY.md into a public GitHub Gist and use that URL).
 
@@ -108,7 +108,7 @@ Primary: English. Optionally add a zh-CN localized description (above).
 
 1. Register a Chrome Web Store developer account (one-time **$5**):
    https://chrome.google.com/webstore/devconsole
-2. "New item" → upload `dist/GestureSeek-v<version>.zip`
+2. "New item" → upload `dist/GesturePlay-v<version>.zip`
    (build it with `powershell -ExecutionPolicy Bypass -File tools\pack.ps1`).
 3. Paste the listing texts above; upload screenshot(s); pick the category.
 4. Fill the Privacy tab with the exact answers above; set the privacy policy
