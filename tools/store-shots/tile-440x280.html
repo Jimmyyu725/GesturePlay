@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!-- Small promo tile (440x280) for the Chrome Web Store listing.
+     Render: chrome --headless=new --window-size=440,280 --screenshot=... this file -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 440px; height: 280px; overflow: hidden; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(420px 260px at 20% 0%, #241847, #0d0d18 65%), #0d0d18;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 10px 0 30px;
+      }
+      .left { width: 230px; }
+      .brand { display: flex; align-items: center; gap: 10px; }
+      .dot {
+        width: 26px; height: 26px; border-radius: 7px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        position: relative;
+      }
+      .dot::before, .dot::after {
+        content: ""; position: absolute; top: 10px; width: 6px; height: 6px;
+        border-radius: 50%; background: #fff;
+      }
+      .dot::before { left: 5px; }
+      .dot::after { right: 5px; }
+      h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; }
+      .tag { margin-top: 10px; font-size: 15.5px; line-height: 1.45; color: #c9c3e8; }
+      .tag b { color: #fff; }
+      .priv { margin-top: 12px; font-size: 12.5px; color: #8f86c0; }
+      .right { position: relative; width: 170px; height: 100%; }
+      .right img { position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 175px; }
+      .arrow {
+        position: absolute; top: 50%; transform: translateY(-58%);
+        font-size: 30px; font-weight: 800;
+        background: linear-gradient(135deg, #a78bfa, #60a5fa);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      .arrow.l { left: -12px; }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <div class="brand"><div class="dot"></div><h1>GesturePlay</h1></div>
+      <div class="tag"><b>Pinch</b> to scrub.<br /><b>Fist</b> to play / pause.<br />Just your webcam.</div>
+      <div class="priv">100% on-device · zero network</div>
+    </div>
+    <div class="right">
+      <span class="arrow l">⟷</span>
+      <img src="../../assets/store/gesture-pinch.png" alt="" />
+    </div>
+  </body>
+</html>
